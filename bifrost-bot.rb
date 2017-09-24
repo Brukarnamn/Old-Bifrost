@@ -425,6 +425,9 @@ end
 
 
 # Check if the role should be added or removed from the user.
+# @param [UserHash]
+# @param [PermissionRole<String>]
+# @return [true,false]
 def add_role_to_user? user_hash, permission_role
   Debug.trace if @DEBUG
 
@@ -438,6 +441,9 @@ end
 
 
 # Add a role to a user.
+# @param [EventObject]
+# @param [PermissionRoleHash]
+# @return [true]
 def add_role_to_user event_obj, single_permission_role_hash
   Debug.trace if @DEBUG
   returnval = true
@@ -455,6 +461,9 @@ end
 
 
 # Remove a role from a user.
+# @param [EventObject]
+# @param [PermissionRoleHash]
+# @return [true]
 def remove_role_from_user event_obj, single_permission_role_hash
   Debug.trace if @DEBUG
   returnval = true
@@ -472,6 +481,8 @@ end
 
 
 # Send a message if the role change isn't possible for whatever reason.
+# @param [EventObject]
+# @return [true]
 def role_change_not_possible event_obj
   Debug.trace if @DEBUG
 
@@ -489,6 +500,10 @@ end
 
 # Add or remove a role permission from a user.
 # Check if in doing so, the user should have other role permissions removed.
+# @param [EventObject]
+# @param [PermissionRoleObject]
+# @param [true,false]
+# @return [true,false]
 def change_role_permission_on_user event_obj, permission_role, remove_conflicting_roles = false
   Debug.trace if @DEBUG
   returnval = false
@@ -540,6 +555,7 @@ end
 
 
 # Print outs a message when a new user joins the server.
+# @param [EventObject]
 # @return [true]
 def member_join event_obj
   Debug.trace if @DEBUG
@@ -559,6 +575,7 @@ end
 
 
 # Prints out a message when a user leaves the server.
+# @param [EventObject]
 # @return [true]
 def member_leave event_obj
   Debug.trace if @DEBUG
@@ -576,6 +593,8 @@ end
 
 
 # Prints out the discord object ids for the server and the current channel to the console.
+# @param [EventObject]
+# @return [true]
 def output_server_and_channel_info event_obj
   Debug.trace if @DEBUG
 
@@ -592,7 +611,10 @@ def output_server_and_channel_info event_obj
 end
 
 
+
 # Show the help text.
+# @param [EventObject]
+# @return [true]
 def show_help_text event_obj
   Debug.trace if @DEBUG
 
@@ -607,7 +629,10 @@ def show_help_text event_obj
   return true
 end  
 
+
+
 # Check what the user typed as a simple one-word command and do appropriately.
+# @param [EventObject]
 # @return [true]
 def handle_simple_messages event_obj
   Debug.trace if @DEBUG
@@ -642,6 +667,9 @@ end
 
 
 
+# Initialize the bot.
+# Set up the events it should respond to.
+# @return [Discordrb::Bot]
 def init_bot
   Debug.trace if @DEBUG
   @BOT_OBJ = Discordrb::Bot.new token: @BOT_SETTINGS_HASH['token'], client_id: @BOT_SETTINGS_HASH['client_id']
@@ -666,7 +694,7 @@ end
 
 
 
-# Main part of the program.
+# "Main" part of the program.
 # With its own little variable scope.
 def main
   Debug.trace if @DEBUG
