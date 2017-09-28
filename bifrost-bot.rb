@@ -7,8 +7,11 @@
 
   In Windows, open "Command Prompt with Ruby".
 
-    gem install discordrb --platform=ruby
     gem install json --platform=ruby
+    gem install discordrb --platform=ruby       # http://www.rubydoc.info/github/meew0/discordrb/toplevel
+    gem install nokogiri --platform=ruby        # http://www.rubydoc.info/github/sparklemotion/nokogiri/Nokogiri/XML/Node
+                                                # https://wkhtmltopdf.org/downloads.html
+    gem install imgkit --platform=ruby          # https://github.com/csquared/IMGKit
 
   Log in on your existing account (or register a normal account and log in) then go to
     https://discordapp.com/developers/applications/me
@@ -27,13 +30,14 @@
 
   then a server owner/admin have to invite the bot:
     https://discordapp.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=0
-    https://discordapp.com/oauth2/authorize?client_id=361253623881269258&scope=bot&permissions=335612928
+    https://discordapp.com/oauth2/authorize?client_id=361253623881269258&scope=bot&permissions=335612928 - livebot
+    https://discordapp.com/oauth2/authorize?client_id=361603350975741952&scope=bot&permissions=335612928 - testbot
 
   Run the program with
-    ruby -I. bot.rb
-    ruby -I. -w bot.rb
+    ruby -I. bifrost-bot.rb
+    ruby -TI. -w bifrost-bot.rb
   or for more interactive purposes
-    irb -I. -r bot.rb
+    irb -I. -r bifrost-bot.rb
 
   Invite link to the Testserver
     https://discord.gg/qTG4GQH
@@ -44,12 +48,17 @@
       serverid: 202189706383982605
     <Channel name=conversation id=202189706383982605 topic="English preferred in this channel, thanks. :)" type=0 position=4 server=#<Discordrb::Server:0x0000000003351698>>
       channelid: 202189706383982605
+
+  https://leovoel.github.io/embed-visualizer/
 =end
 # Json must be loaded first, or strange things happens.
 begin
-  require 'json'        or raise 'json'
-  require 'discordrb'   or raise 'discordrb'
-  require 'debug'       or raise 'debug'
+  require 'json'          or raise 'json'
+  require 'discordrb'     or raise 'discordrb'
+  require 'debug'         or raise 'debug'
+  require 'open-uri'      or raise 'open-uri'
+  require 'nokogiri'      or raise 'nokogiri'
+  require 'imgkit'        or raise 'imgkit'
 rescue LoadError => e
   # What to do if it fails.
   # Have to explicitly define which error we want to rescue from.
@@ -63,12 +72,28 @@ ensure
 end
 
 @DEBUG = true.freeze
-@TEST = false.freeze;
-@BOT_RUNS_ON_SERVER_ID = (@TEST ? '348172070947127306'.freeze :  #MinEgenTestserver
-                                  '202189706383982605'.freeze)
+@DEBUG_SPAMMY = false.freeze
+
+@TEST = true.freeze;
+@BOT_RUNS_ON_SERVER_ID = (@TEST ? '348172070947127306'.freeze :   #MinEgenTestserver
+                                  '202189706383982605'.freeze)    #ENLE-server
+
+# The folder where the bot should store the images fetched from the web.
+@WORD_INFLECTION_IMAGE_PATH = (@TEST ? 'd:/bifrost-discordbot'.freeze :
+                                       'c:/bifrost-discordbot'.freeze)
+
+# The location of the html-to-image executable. Needed if the bot is running on Windows.
+@WKHTMLTOIMAGE_EXE_PATH = 'C:/bin/wkhtmltopdf/bin/wkhtmltoimage.exe'.freeze
 
 # The character that all the bot commands must start with.
 @BOT_INVOKE_CHARACTER = '!'.freeze
+
+# Accept only space
+# dot .
+# unicode letters    \p{L}
+# unicode diacritics \p{M}  and
+# unicode digits     \p{N}
+@ILLEGAL_DICTIONARY_SEARCH_CHARACTERS = /[^ \.\p{L}\p{M}]/.freeze
 
 #
 # The settings read from the configuration files.
@@ -81,8 +106,20 @@ end
 # The Discord Bot object
 @BOT_OBJ = nil
 
-# Hash containing user ids and when they last issued a bot command that shouldn't be spammed.
-@USER_PERMISSION_CHANGES = {}
+# Hash containing user ids and when they last issued a bot command. To prevent them spamming commands.
+@USER_BOT_INVOKES = {}
+
+# Maximum commands per time frame. Need to be greater than 2, or some if tests fail. ;-)
+@USER_MAX_BOT_INVOKES_PER_TIME_LIMIT = 5.freeze
+
+# Maximum commands during this time frame.
+@BOT_INVOKES_TIME_FRAME_LIMIT = 60.freeze
+
+# Hash container the dictionary responses. To prevent asking about the same stuff multiple times.
+@ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE = {}
+
+# The CSS used for the generation of html-to-image.
+@ORDBOK_DICTIONARY_CSS = nil;
 
 # Hash containing the user command name for adding/removing a role, and its corresponding Discord server's role name.
 # Will be changed to all uppercase letters.
@@ -122,11 +159,14 @@ def load_settings
   Debug.trace if @DEBUG
   returnval = true
 
-  file_contents = File.read('./bot_settings.json')
+  bot_settings_filename = './bot_settings' + (@TEST ? '_dev' : '') + '.json'
+  file_contents = File.read(bot_settings_filename)
   @BOT_SETTINGS_HASH = JSON.parse(file_contents)
 
   file_contents = File.read('./server_settings.json')
   @ALL_SERVER_SETTINGS_HASH = JSON.parse(file_contents)
+
+  @ORDBOK_DICTIONARY_CSS = File.read('./ordbok_uib_no.css')
 
   # Only get the settings for the server the bot should respond on.
   # Don't want our testing to interfere on the live servers.
@@ -444,7 +484,7 @@ end
 # @param [EventObject]
 # @param [PermissionRoleHash]
 # @return [true]
-def add_role_to_user event_obj, single_permission_role_hash
+def add_role_to_user event_obj, single_permission_role_hash, is_temp = false, timeout = 60
   Debug.trace if @DEBUG
   returnval = true
 
@@ -452,8 +492,14 @@ def add_role_to_user event_obj, single_permission_role_hash
   server_hash = get_server_from_event event_obj
 
   event_obj.server.member(user_hash[:id]).add_role(single_permission_role_hash[:obj])
-  @BOT_OBJ.send_message(server_hash[:role_spam_channel_id],
-    'Added the ' + single_permission_role_hash[:name] + ' role to you, ' + user_hash[:mention])
+  message = 'Added the ' + single_permission_role_hash[:name] + ' role to you, ' + user_hash[:mention]
+
+  if is_temp
+    # Timeout is in seconds.
+    @BOT_OBJ.send_temporary_message(server_hash[:role_spam_channel_id], message, timeout)
+  else
+    @BOT_OBJ.send_message(server_hash[:role_spam_channel_id], message)
+  end
 
   return returnval
 end
@@ -464,7 +510,7 @@ end
 # @param [EventObject]
 # @param [PermissionRoleHash]
 # @return [true]
-def remove_role_from_user event_obj, single_permission_role_hash
+def remove_role_from_user event_obj, single_permission_role_hash, is_temp = false, timeout = 60
   Debug.trace if @DEBUG
   returnval = true
 
@@ -472,8 +518,14 @@ def remove_role_from_user event_obj, single_permission_role_hash
   server_hash = get_server_from_event event_obj
 
   event_obj.server.member(user_hash[:id]).remove_role(single_permission_role_hash[:obj])
-  @BOT_OBJ.send_message(server_hash[:role_spam_channel_id],
-    'Removed the ' + single_permission_role_hash[:name] + ' role from you, ' + user_hash[:mention])
+  message = 'Removed the ' + single_permission_role_hash[:name] + ' role from you, ' + user_hash[:mention]
+
+  if is_temp
+    # Timeout is in seconds.
+    @BOT_OBJ.send_temporary_message(server_hash[:role_spam_channel_id], message, timeout)
+  else
+    @BOT_OBJ.send_message(server_hash[:role_spam_channel_id], message)
+  end
 
   return returnval
 end
@@ -538,7 +590,7 @@ def change_role_permission_on_user event_obj, permission_role, remove_conflictin
             next
           else
             user_hash[:roles][role_name] = false
-            remove_role_from_user event_obj, server_roles_hash[role_name]
+            remove_role_from_user event_obj, server_roles_hash[role_name], true
           end
         end
       end
@@ -547,6 +599,751 @@ def change_role_permission_on_user event_obj, permission_role, remove_conflictin
       user_hash[:roles][permission_role] = false
       returnval = remove_role_from_user event_obj, server_roles_hash[permission_role]
     end
+  end
+
+  return returnval
+end
+
+
+
+# Lookup a word in ordbok.uib.no and parse and fetch the inflection pattern for a word.
+# @param [SearchString<String>]
+# @param [true,false] - true if bokmål, false if nynorsk
+# @return [WordHash]
+def ordbok_uib_no_dictionary_lookup search_string, is_bokmål = true
+  Debug.trace if @DEBUG
+  returnval = nil
+  word_hash = { length: 0 }
+  @max_results = 10.freeze
+
+  ordbok_base_uri = 'http://ordbok.uib.no/perl/ordbok.cgi?'
+  #ordbok_base_uri = 'https://www.google.no/?'
+
+  # Removing strange characters.
+  if search_string.match(@ILLEGAL_DICTIONARY_SEARCH_CHARACTERS)
+    puts "#{__LINE__}"+'BAD BOY/GIRL! Illegal characters: ' + search_string
+    search_string = search_string.gsub(@ILLEGAL_DICTIONARY_SEARCH_CHARACTERS, '')
+    puts 'Changed it into>> ' + search_string + ' <<'
+  end
+  if search_string.length < 1
+    return returnval
+  end
+
+  #&nynorsk=+&ordbok=bokmaal&
+  #&bokmaal=+&ordbok=nynorsk&
+  word_hash[:url] = dictionary_url = URI::encode(ordbok_base_uri + [
+    #'OPP=^' + search_string + '$',
+    'OPP=' + search_string + '',
+    'ant_bokmaal=' + @max_results.to_s,
+    'ant_nynorsk=' + @max_results.to_s,
+    (is_bokmål ? 'bokmaal' : 'nynorsk') + '=+',
+    'ordbok=' + (is_bokmål ? 'bokmaal' : 'nynorsk'),
+    #'ava=ava',
+    'type=bare_oppslag',
+    #'soeketype=r',  # RegExp search
+    'soeketype=v',   # Normal search
+  ].join('&'))
+
+  word_hash[:url_simple] = dictionary_url_simple = URI::encode(ordbok_base_uri + [
+    'OPP=' + search_string + '',
+  ].join('&'))
+
+  ordbok_word_html_page_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+    'ordbok_' + search_string.to_s + '_'+ (is_bokmål ? 'nb' : 'nn') + '.html'
+
+  puts dictionary_url.inspect if @DEBUG
+  
+  begin
+    if File.file?(ordbok_word_html_page_name)
+      puts('Found cached dictionary word page: ' + ordbok_word_html_page_name) if @DEBUG
+      dictionary_page_contents = File.read(ordbok_word_html_page_name)
+    else
+      dictionary_page_contents_fh = open(dictionary_url, 'User-Agent' => 'Discord-bot for the English-Norwegian language exchange.')
+      dictionary_page_contents = dictionary_page_contents_fh.read
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_blåbærsyltetøy_nb.html')
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_jogurt_nb.html')
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_plan_nb.html')
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_tro_nb.html')
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_være_nb.html')
+      #dictionary_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_vere_nn.html')
+
+      puts('Saving dictionary word html page... ' +  ordbok_word_html_page_name) if @DEBUG
+      File.write(ordbok_word_html_page_name, dictionary_page_contents)
+    end
+    dictionary_page_html = Nokogiri::HTML(dictionary_page_contents) do |config|
+      config.nonet.recover
+    end
+    
+  rescue Exception => e
+    # Some error.
+    #<Errno::ENOENT: No such file or directory @ rb_sysopen - N:/Ruby/Dis...bot.rb>
+    #<URI::InvalidURIError: URI must be ascii only "https://...shg\u00F8wle...type=r">
+    puts e.inspect
+    return returnval
+  ensure
+    # This will always be done.
+  end
+  #puts dictionary_page_contents.inspect if @DEBUG
+
+  dictionary_page_html_table_id = 'byttut' + (is_bokmål ? 'BM' : 'NN')
+  
+  i = 1
+  search_result = dictionary_page_html.css('table#'+dictionary_page_html_table_id+' tr/td.oppslagtd/div.oppslagdiv')
+  #puts search_result.inspect
+  search_result.each do |keywords|
+    #puts keywords.inspect
+    keywords_text_hash = parse_dictionary_body_from_nokogiri_nodes keywords
+    word_hash[i] = {
+      timestamp: Time.now,
+      keyword: keywords_text_hash[:value].strip.gsub(/\|$/, ''),
+      art_id: '',
+      word_ids: {},
+      roman_numerals: {},
+      word_spellings: {},
+      word_classes: {},
+      word_synonyms: '',
+      word_definitions_header: '',
+      word_definitions_array: [],
+      word_etymology: '',
+    }
+    word_hash[:length] += 1
+    i += 1
+  end
+
+  i = 1
+  search_result = dictionary_page_html.css('table#'+dictionary_page_html_table_id+' tr/td/div.artikkel')
+  #puts search_result.inspect
+  search_result.each do |articletops|
+    word_hash[i].merge!( art_id: articletops.attributes['id'].value )
+    i += 1
+  end
+
+  i = 1
+  search_result = dictionary_page_html.css('table#'+dictionary_page_html_table_id+' tr/td/div.artikkel/div.artikkelinnhold')
+  search_result.each do |word_article_content|
+    #Debug.divider
+    # Remove double text elements in the source that are used if you have different compact display preference.
+    word_article_content.css('span.tydingC.kompakt').remove
+    word_article_content.css('span.doemeliste.kompakt').remove
+    word_article_content.css('div.doemeliste.utvidet').remove
+
+    # Remove the link to the element for inflection window.
+    word_article_content.css('span.oppsgramordklassevindu').remove
+
+    # Remove more double text elements for the compact display preference.
+    word_article_content.css('span.utvidet/span.tydingC.kompakt').remove
+    word_article_content.css('span.utvidet/span.doeme.kompakt').remove
+
+    # Remove own word article texts inside the current word.
+    word_article_content.css('span.utvidet/div.artikkelinnhold').remove
+    word_article_content.css('span.utvidet/div.tyding.utvidet/div.tyding.utvidet').remove
+    word_article_content.css('span.utvidet/div.tyding.utvidet/div.artikkelinnhold').remove
+
+    #puts word_article_content.to_html if @DEBUG
+
+    # Messy html (and code).
+    # The tag isn't always there, so need to be sure we don't fetch information from the wrong element.
+    roman_numeral_hash = {}
+    current_word_id = 0
+    
+    word_roman_numeral_counter = word_article_content.css('span/style')
+    if word_roman_numeral_counter.length > 0
+      word_roman_numeral_counter.each do |single_roman_numeral_counter|
+        single_roman_numeral_counter_parent = single_roman_numeral_counter.parent
+        #puts single_roman_numeral_counter.inspect
+        oppslagsord_node = single_roman_numeral_counter_parent.next_element
+        #puts oppslagsord_node.inspect
+        if !oppslagsord_node['class'].nil? && oppslagsord_node['class'] =~ /oppslagsord/ && !oppslagsord_node['id'].nil?
+          current_word_id = oppslagsord_node.attributes['id'].value
+
+          if word_hash[i][:word_ids]
+            word_hash[i][:word_ids][current_word_id] = true
+          else
+            word_hash[i][:word_ids] = { current_word_id => true }
+          end
+
+          # Remove the <style> element that is in front of the numbers.
+          single_roman_numeral_counter.remove
+
+          if roman_numeral_hash[current_word_id]
+            roman_numeral_hash[current_word_id].push( single_roman_numeral_counter_parent.text )
+          else
+            roman_numeral_hash[current_word_id] = [ single_roman_numeral_counter_parent.text ]
+          end
+
+          single_roman_numeral_counter_parent['class'] = 'roman'
+        else
+          puts "#{__LINE__}: BRAINFART! Or some changes have been done on the source web page..."
+        end
+      end
+    end
+    word_hash[i].merge!( roman_numerals: roman_numeral_hash )
+
+    multiple_keywords = {}
+    word_keywords = word_article_content.css('span.oppslagsord')
+    word_keywords.each do |single_keyword|
+      current_word_id = single_keyword.attributes['id'].value
+      #word_inflection_image = dictionary_inflection_lookup current_word_id, is_bokmål
+
+      if word_hash[i][:word_ids]
+        word_hash[i][:word_ids][current_word_id] = true
+      else
+        word_hash[i][:word_ids] = { current_word_id => true }
+      end
+
+      if multiple_keywords[current_word_id]
+        multiple_keywords[current_word_id].push(
+          single_keyword.text
+        )
+      else
+        multiple_keywords[current_word_id] = [ single_keyword.text ]
+      end
+    end
+    word_hash[i].merge!( word_spellings: multiple_keywords )
+    #puts multiple_keywords.inspect
+    
+    multiple_wordclasses = {}
+    word_wordclasses = word_article_content.css('span.oppsgramordklasse')
+    word_wordclasses.each do |single_wordclass|
+      word_id_ref_string = single_wordclass.attributes['onclick'].to_s
+      word_id_regexp_res = /vise_fullformer\("(\d+)".*\)/.match(word_id_ref_string)
+      if word_id_regexp_res
+        current_word_id = word_id_regexp_res[1]
+
+        word_inflection_image = ordbok_uib_no_dictionary_inflection_lookup current_word_id, is_bokmål
+        
+        if multiple_wordclasses[current_word_id]
+          multiple_wordclasses[current_word_id][:classes].push(
+            single_wordclass.text
+          )
+        else
+          multiple_wordclasses[current_word_id] = {
+            inflection_image: word_inflection_image,
+            classes: [ single_wordclass.text ],
+          }
+        end
+      else
+        puts "#{__LINE__}: BRAINFART!"
+      end
+    end
+    word_hash[i].merge!( word_classes: multiple_wordclasses )
+    #puts multiple_wordclasses.inspect
+
+    dictionary_body = word_article_content.css('span.utvidet').first
+    word_definitions_hash = parse_dictionary_body_from_nokogiri_nodes dictionary_body
+
+    word_hash[i].merge!( word_definitions_header: word_definitions_hash[:header].strip )
+
+    if !word_definitions_hash[:defs].nil? && word_definitions_hash[:defs].length > 0
+      word_hash[i].merge!( word_definitions_array: word_definitions_hash[:defs] )
+    else
+      word_hash[i].merge!( word_synonyms: word_definitions_hash[:value].strip )
+    end
+
+    # Now that the definitions are fetched, remove these nodes to easier parse and fetch other stuff.
+    word_article_content.css('span.roman').remove
+    word_article_content.css('span.oppslagsord').remove
+    word_article_content.css('span.oppsgramordklasse').remove
+    word_article_content.css('span.utvidet').first.remove
+
+    #puts word_article_content.to_html
+
+    word_etymology_hash = parse_dictionary_body_from_nokogiri_nodes word_article_content
+    if word_etymology_hash[:value].strip.length > 0
+      word_etymology_hash[:value] = word_etymology_hash[:value].gsub(/^([,;.\s]|el)+/, '').gsub(/[,:\s]+$/, '')
+      word_hash[i].merge!( word_etymology: word_etymology_hash[:value].gsub(/\s+/, ' ').strip )
+    else
+      word_hash[i].merge!( word_etymology: '' )
+    end
+
+    sleep 0.5  # Wait half a second so we don't spam the ordbok.uib.no site too much.
+    i += 1
+  end
+
+  if @DEBUG && false
+    word_hash.each do |index,word_data|
+      if word_data.is_a?(Integer) ||
+        word_data.is_a?(String) ||
+        word_data.is_a?(Time)
+       puts "----- #{index}: #{word_data}"
+      elsif word_data.is_a?(Hash)
+        puts "----- #{index} -----"
+        word_data.each do |key,value|
+          puts "#{key}: #{value}"
+        end
+      else
+        puts word_data.class
+      end
+    end
+  end
+
+  returnval = word_hash
+  return returnval
+end
+
+
+
+def parse_dictionary_body_from_nokogiri_nodes nokogiri_node_obj
+  #Debug.trace if @DEBUG && @DEBUG_SPAMMY
+  returnval = {
+    type: nil,
+    prefix: '',
+    postfix: '',
+    value: nil,
+    header: '',
+    defs: [],
+  }
+  #puts nokogiri_node_obj.inspect if @DEBUG && @DEBUG_SPAMMY
+  
+  if nokogiri_node_obj.is_a?(Nokogiri::XML::Element) && !nokogiri_node_obj.name.nil?
+    #puts 'ELE-----'+nokogiri_node_obj.to_html if @DEBUG && @DEBUG_SPAMMY
+
+    case nokogiri_node_obj.name
+    when 'span', 'div', 'a'
+      returnval.merge!( type: 'text' )
+
+      node_attributes = nokogiri_node_obj.attributes
+      if !node_attributes.nil?
+        node_attribute_class = node_attributes['class']
+        node_attribute_style = node_attributes['style']
+      end
+
+      if !node_attribute_style.nil?
+        case node_attribute_style.value
+        when /font-style:.*italic/
+          returnval.merge!( type: 'css', prefix: '*', postfix: '*' )
+        when /font-weight:.*(bold|900)/
+          returnval.merge!( type: 'css', prefix: '**', postfix: '**' )
+        when /font-weight:.*normal/
+          returnval.merge!( type: 'css' )
+        when /font-family/
+          returnval.merge!( type: 'css' )
+        when /margin/
+          returnval.merge!( type: 'css' )
+        else
+          puts '!!__ELE-ATTRI-STYLEVAL: '+node_attribute_style.to_s
+        end
+      end
+
+      if !node_attribute_class.nil?
+        case node_attribute_class.value
+        when /tyding/
+          returnval.merge!( type: 'definition' )
+        when /henvisning/, /etymtilvising/
+          returnval.merge!( type: 'text', prefix: '*', postfix: '*' )
+        when /utvidet/, /tilvising/
+          returnval.merge!( type: 'text' )
+        when /artikkelinnhold/, /oppslagdiv/, /tiptip/
+          returnval.merge!( type: 'text' )
+        else
+          puts '!!__ELE-ATTRI-CLASSVAL: '+node_attribute_class.to_s
+        end
+      end
+
+    when 'br'
+      # Adding | so the word lookups can be divided easier.
+      returnval.merge!( type: 'text', postfix: '|' )
+      
+    else
+      puts '!!__ELE-TYPE: '+nokogiri_node_obj.name.to_s
+      
+    end
+
+    merged_text = ''
+    nokogiri_node_obj.children.each do |single_node_obj|
+      child_node = parse_dictionary_body_from_nokogiri_nodes single_node_obj
+
+      if child_node.nil?
+        raise 'Unexpected return value from parse_dictionary_body_from_nokogiri_nodes(...)'
+      else
+        case child_node[:type]
+        when 'text', 'css'
+          merged_text += child_node[:prefix] + child_node[:value] + child_node[:postfix]
+        when 'definition'
+          #puts '_______________________________________________________________' if @DEBUG && @DEBUG_SPAMMY
+          #puts merged_text if @DEBUG && @DEBUG_SPAMMY
+          #puts child_node.inspect if @DEBUG && @DEBUG_SPAMMY
+
+          if merged_text.strip.length > 1 && returnval[:defs].length < 1
+            returnval.merge!( header: merged_text.gsub(/\s+/, ' ').strip )
+          end
+          merged_text = child_node[:prefix] + child_node[:value] + child_node[:postfix]
+          #puts merged_text if @DEBUG && @DEBUG_SPAMMY
+
+          returnval.merge!( defs: returnval[:defs].push(merged_text.gsub(/\s+/, ' ').strip) )
+        else
+          puts '!!__ELE-RECU'
+          puts child_node.inspect
+          puts returnval.merge!( type: 'text' )
+        end
+      end
+    end
+    #puts '___MERGE___: '+merged_text if @DEBUG && @DEBUG_SPAMMY
+    returnval.merge!( value: merged_text )
+
+  elsif nokogiri_node_obj.is_a?(Nokogiri::XML::Text)
+    #puts 'TXT----->>>>'+nokogiri_node_obj.to_html+'<<<<' if @DEBUG && @DEBUG_SPAMMY
+
+    returnval.merge!(
+      type: 'text',
+      value: nokogiri_node_obj.text
+    )
+
+  else
+    puts nokogiri_node_obj.inspect
+    puts 'UNON-----'+nokogiri_node_obj.class.to_s
+
+  end
+
+  if returnval[:type].nil?
+    puts '!!__UNON-----NIL!!'
+    puts nokogiri_node_obj.inspect
+    puts returnval.inspect
+  end
+
+  return returnval
+end
+
+
+
+# Fetch the inflection pattern of the word.
+# First check if we already have it, if not,
+# fetch it from the ordbok.uib.no site. Then make a picture of it.
+# @param [word_id<Interger>]
+# @param [true,false] - True if bokmål, false if nynorsk.
+# @param [DefaultImageWidth<Integer>] - For nouns around (stringlength x 10 x 5)
+# @return [nil] | [image_path<String>]
+def ordbok_uib_no_dictionary_inflection_lookup word_id, is_bokmål = true, default_image_width = 1024
+  Debug.trace if @DEBUG
+  returnval = nil
+
+  dictionary_inflection_url = URI::encode('http://ordbok.uib.no/perl/' +
+    (is_bokmål ? 'bob' : 'nob') + '_hente_paradigme.cgi?' +
+    'lid=' + word_id.to_s)
+
+  inflection_image_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+    (is_bokmål ? 'nb' : 'nn') + '_bøyningsmønster_' + word_id.to_s + '.jpg'
+
+  inflection_html_page_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+    (is_bokmål ? 'nb' : 'nn') + '_bøyningsmønster_' + word_id.to_s + '.html'
+
+  puts "LOOKUP: #{inflection_image_name} | #{dictionary_inflection_url}" if @DEBUG
+
+  if File.file?(inflection_image_name)
+    puts('Found cached image: ' + inflection_image_name) if @DEBUG
+    return inflection_image_name
+  else
+    puts('Fetching inflection pattern from the web... ' + dictionary_inflection_url) if @DEBUG
+  end
+
+  begin
+    if File.file?(inflection_html_page_name)
+      puts('Found cached inflection page: ' + inflection_html_page_name) if @DEBUG
+      dictionary_inflection_page_raw_contents = File.read(inflection_html_page_name)
+    else
+      dictionary_inflection_page_raw_contents = open(dictionary_inflection_url).read
+      #dictionary_inflection_page_contents = File.read('N:/Ruby/Discordbot/test/ordbok_nb_blåbærsyltetøy7578.html')
+    end
+  rescue Exception => e
+    # Some error.
+    #<Errno::ENOENT: No such file or directory @ rb_sysopen - N:/Ruby/Dis...bot.rb>
+    #<URI::InvalidURIError: URI must be ascii only "https://...shg\u00F8wle...type=r">
+    puts e.inspect
+    return returnval
+  ensure
+    # This will always be done.
+  end
+
+  dictionary_inflection_page_css = @ORDBOK_DICTIONARY_CSS
+  #  dictionary_inflection_page_css = <<'PAGE_CSS'
+  #PAGE_CSS
+
+  dictionary_inflection_page_contents = '<!DOCTYPE html>'+"\n"+
+    '<html lang="no">'+"\n"+
+    '<head>'+"\n"+
+    '  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>'+"\n"+
+    '  <title></title>'+"\n"+
+    '  <style type="text/css">'+"\n"+
+    dictionary_inflection_page_css +
+    '  </style>'+"\n"+
+    '</head>'+"\n"+
+    '<body><div class="container">'+"\n"+
+    dictionary_inflection_page_raw_contents +
+    '</div></body>'+"\n"+
+    '</html>'
+  #puts dictionary_inflection_page_raw_contents.inspect if @DEBUG
+
+  # config/initializers/imgkit.rb
+  IMGKit.configure do |config|
+    config.wkhtmltoimage = @WKHTMLTOIMAGE_EXE_PATH
+    config.default_options = {
+      width:    default_image_width,
+      'enable-smart-width': 1,
+      format:   :jpg,
+      quality:  90,
+    }
+  end
+
+  inflection_image_obj = IMGKit.new(dictionary_inflection_page_contents)
+  #inflection_image_png = inflection_image_obj.to_img(:jpg)
+  #puts inflection_image_png.inspect if @DEBUG
+
+  begin
+    puts('Saving inflection html page... ' +  inflection_html_page_name) if @DEBUG
+    File.write(inflection_html_page_name, dictionary_inflection_page_raw_contents)
+
+    puts('Saving inflection image file... ' +  inflection_image_name) if @DEBUG
+    file = inflection_image_obj.to_file(inflection_image_name)
+    returnval = inflection_image_name
+  rescue Exception => e
+    # Some error.
+    return returnval
+  ensure
+    # This will always be done.
+  end
+
+  return returnval
+end
+
+
+
+# Do some preliminary checking on the search word.
+# Then look up this word in the dictionary and format it as en embedded Discord text-ball.
+# @param [EventObject]
+# @param [SearchWords]
+# @param [true,false] - True if bokmål, false if nynorsk.
+# @param [true,false] - True if show more than just the words and their word classes.
+# @return [true,yes]
+def ordbok_uib_no_dictionary_lookup_wrapper event_obj, search_string, is_bokmål = true, is_expanded = false
+  Debug.trace if @DEBUG
+  # Removing strange characters.
+  # Thank you @High Tide, @Kaos  ;-)
+  if search_string.match(@ILLEGAL_DICTIONARY_SEARCH_CHARACTERS)
+    puts "#{__LINE__}"+'BAD BOY/GIRL! Illegal characters: ' + search_string
+    search_string = search_string.gsub(@ILLEGAL_DICTIONARY_SEARCH_CHARACTERS, '')
+    puts 'Changed it into>> ' + search_string + ' <<'
+  end
+
+  # If downcasing the search string then dictionary entries that do in fact
+  # contain upper case letters can't be found.
+  # Unless regular search is turn on, but then you get multiple search hits for words.
+  search_string = search_string.downcase
+  encoded_search_string = URI::encode(search_string).downcase
+  
+  if @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE[encoded_search_string].nil?
+    word_response_hash = ordbok_uib_no_dictionary_lookup search_string, is_bokmål
+    #word_response_hash = ordbok_uib_no_dictionary_lookup search_string, is_bokmål
+
+    if word_response_hash.nil?
+      puts 'Search error. Ignoring.'
+      return false
+    end
+
+    word_response_hash.merge!( timestamp: Time.now )
+    @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE[encoded_search_string] = word_response_hash
+  else
+    puts 'Using cached dictionary values.' if @DEBUG
+    word_response_hash = @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE[encoded_search_string]
+  end
+
+  if @DEBUG
+    word_response_hash.each do |index,word_data|
+      if word_data.is_a?(Integer) ||
+         word_data.is_a?(String) ||
+         word_data.is_a?(Time)
+        puts "----- #{index}: #{word_data}"
+      elsif word_data.is_a?(Hash)
+        puts "----- #{index} -----"
+        word_data.each do |key,value|
+          puts "#{key}: #{value}"
+        end
+      else
+        puts word_data.class
+      end
+    end
+  end
+
+  word_count = word_response_hash[:length] || 0
+  ordbok_url = word_response_hash[:url] || ''
+  ordbok_url_simple = word_response_hash[:url_simple] || ''
+  timestamp = word_response_hash[:timestamp] || Time.now
+  #puts "There should be #{word_count} words..." if @DEBUG
+  
+  author_str = (is_bokmål ? 'Bokmålsordboka' : 'Nynorskordboka')
+  base_ordbok_url = 'http://ordbok.uib.no/'
+  ordbok_info_url = base_ordbok_url + 'info/'
+  footer_str = 'Universitetet i Bergen og Språkrådet © 2017'
+
+  description_str = ''
+  fields_array = []
+
+  if word_count < 1
+    description_str += 'No search results for ['+search_string+']('+ordbok_url+'). You might want to modify your search.' #+"\n"+
+      #'    ['+ordbok_url_simple+']('+ordbok_url+')'
+  else
+    description_str += "[#{word_count}]("+ordbok_url+') ' + (word_count > 1 ? 'entries were' : 'entry was') +
+      ' found for [`'+search_string+'` (click me)]('+ordbok_url+').' +
+      ' [Help](' + (ordbok_info_url + (is_bokmål ? 'bob' : 'nob') + '_forkl.html') + ').'
+
+    #puts description_str
+
+    (1..word_count).each do |i_counter|
+      single_word_hash = word_response_hash[i_counter]
+      single_word_ids = single_word_hash[:word_ids].keys
+      puts single_word_hash.inspect if @DEBUG && @DEBUG_SPAMMY
+      
+      word_header = '`'+ single_word_hash[:keyword].gsub('|', '` | `') + '`'
+      word_intro = ''
+      word_text = ''
+
+      w_counter = 0
+      single_word_ids.each do |id|
+        word_intro += (single_word_hash[:roman_numerals][id] ? '**' + single_word_hash[:roman_numerals][id].join('**, **') + '** ' : '')
+        word_intro += (single_word_hash[:word_spellings][id] ?
+          '**' + single_word_hash[:word_spellings][id].join('**, **') + '**' :
+          '<Internal error>'
+        ) + ' '
+        word_intro += (single_word_hash[:word_classes][id] ?
+          '*' + single_word_hash[:word_classes][id][:classes].join('*, *') + '*' :
+          ''
+        ) + ' '
+
+        w_counter += 1
+        word_intro += (w_counter < single_word_ids.length ? '; *eller* ' : '')
+      end
+      word_intro += "\n"
+      
+      if is_expanded
+        word_intro += (single_word_hash[:word_etymology].length > 0 ? single_word_hash[:word_etymology] + "\n" : '')
+        word_text += (single_word_hash[:word_synonyms].length > 0 ? single_word_hash[:word_synonyms] + "\n" : '')
+        word_text += (single_word_hash[:word_definitions_header].length > 0 ? single_word_hash[:word_definitions_header] + "\n" : '')
+        single_word_hash[:word_definitions_array].each { |single_word_def| word_text += single_word_def + "\n" }
+      else
+      end
+      
+      word_text = word_intro + word_text
+
+      # Discord's max length
+      if word_text.length > 1024
+        word_text = word_text[0..1017] + ' [...]'
+      end
+      
+      fields_array.push({ name: word_header, value: word_text })
+    end #counter
+  end #if
+
+  event_obj.channel.send_embed( '**' + author_str + '**: Official spellings and inflections:' +"\n"+ordbok_url_simple ) do |embed|
+    embed.colour = 0x490506
+    #embed.author = Discordrb::Webhooks::EmbedAuthor.new(name: search_string + ' (click me)', url: ordbok_url)
+    embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: footer_str)
+    #embed.timestamp = timestamp
+
+    #embed.title = ordbok_url_simple
+    #embed.url = ordbok_url
+
+    embed.description = description_str
+    fields_array.each { |word| embed.add_field(name: word[:name], value: word[:value]) }
+  end
+
+  return true
+end
+
+
+
+# Dumps the hash table for the dictionary entries from memory to the screen/log file.
+# TODO: Ability to read it back in.
+def save_ordbok_dictionary_word_responses_lookup_table
+  Debug.trace if @DEBUG
+  Debug.divider
+  
+  puts @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE.inspect
+
+  return true
+end
+
+
+
+# Adds/remembers the timestamp the user did a command.
+# Return true if the user can do the command.
+# Return false otherwise.
+# Thank you @High Tide ;-)
+# @param [EventObject]
+# @return [true,false]
+def check_if_user_spam_commands event_obj, command, needed_time_since_last_command = 1
+  Debug.trace if @DEBUG
+  returnval = true
+  is_spamming = false
+
+  user_hash = get_user_from_event event_obj
+  user_id = user_hash[:id]
+  
+  remember_me = { cmd: command, time: Time.now }
+  timediff_since_last_command = @BOT_INVOKES_TIME_FRAME_LIMIT + 1
+
+  #puts @USER_BOT_INVOKES.inspect if @DEBUG && @DEBUG_SPAMMY
+  
+  if @USER_BOT_INVOKES.has_key? user_id
+    if @USER_BOT_INVOKES[user_id].length > 0
+      timediff_since_last_command = Time.now - @USER_BOT_INVOKES[user_id][-1][:time]
+    end
+
+    # Check the time since any similar command.
+    (0..@USER_BOT_INVOKES[user_id].length-1).each do |i_counter|
+      #puts "før: #{timediff_since_last_command}" if @DEBUG && @DEBUG_SPAMMY
+      #puts "#{i_counter}: #{@USER_BOT_INVOKES[user_id][i_counter][:cmd]} ==? #{command}" if @DEBUG && @DEBUG_SPAMMY
+      # If the command used matches a command previously used, recalculate the time difference.
+      if @USER_BOT_INVOKES[user_id][i_counter][:cmd] == command
+        timediff_since_last_command = Time.now - @USER_BOT_INVOKES[user_id][i_counter][:time]
+      end
+      #puts "ett: #{timediff_since_last_command}" if @DEBUG && @DEBUG_SPAMMY
+    end
+
+    # Add the latest user command to the array.
+    @USER_BOT_INVOKES[user_id].push( remember_me )
+
+    # Loop over all of the user commands and see if of them are old and should be removed.
+    (0..@USER_BOT_INVOKES[user_id].length-1).each do |i_counter|
+      #puts i_counter if @DEBUG && @DEBUG_SPAMMY
+      #puts @USER_BOT_INVOKES[user_id].inspect if @DEBUG && @DEBUG_SPAMMY
+
+      if i_counter > @USER_BOT_INVOKES[user_id].length-1
+        break
+      end
+      timediff = Time.now - @USER_BOT_INVOKES[user_id][i_counter][:time]
+
+      if timediff > @BOT_INVOKES_TIME_FRAME_LIMIT
+        @USER_BOT_INVOKES[user_id].shift
+        # Redo the loop from the current index.
+        redo
+      end
+    end #loop
+
+    user_invokes = @USER_BOT_INVOKES[user_id]
+    #puts user_invokes.length if @DEBUG
+
+    # Give the user a warning before they are over the edge.
+    # Timeout is in seconds.
+    if user_invokes.length > (@USER_MAX_BOT_INVOKES_PER_TIME_LIMIT + 1)
+      returnval = false
+    elsif user_invokes.length > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
+      event_obj.channel.send_temporary_message( user_hash[:mention] + ', you are now **ignored**. Ask the other people here what works.', 5*@BOT_INVOKES_TIME_FRAME_LIMIT)
+      returnval = false
+    elsif (user_invokes.length + 1) > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
+      event_obj.channel.send_temporary_message( user_hash[:mention] + ', you **really** need to **calm down**! Try `!help` to see valid commands. Or ask someone else here.', 5*@BOT_INVOKES_TIME_FRAME_LIMIT)
+      returnval = true
+    #elsif (user_invokes.length + 2) > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
+    #  returnval = true
+    else
+      if timediff_since_last_command < needed_time_since_last_command
+        event_obj.channel.send_temporary_message('**Ignored**. ' + user_hash[:mention] + ', you should **calm down**.', 5)
+        returnval = false
+      else
+        returnval = true
+      end
+    end
+
+  else
+    @USER_BOT_INVOKES[user_id] = [ remember_me ]
   end
 
   return returnval
@@ -564,10 +1361,9 @@ def member_join event_obj
   server_hash = get_server_from_event event_obj
 
   @BOT_OBJ.send_message(server_hash[:default_channel_id],
-    'Hei ' + user_hash[:mention] + ' og velkommen til **' + server_hash[:servername] + '**!' +"\n"+
+    'Hei ' + user_hash[:mention] + ' (id: *'+ user_hash[:id] +'*) og velkommen til **' + server_hash[:servername] + '**!' +"\n"+
     'Feel free to assign yourself an applicable role by typing `!beginner`, `!intermediate`, or `!native`.' +"\n"+
-    'We hope you enjoy your stay.' +"\n"+
-    '*(Id: ' + user_hash[:id] + ')*')
+    'We hope you enjoy your stay.')
 
   return true
 end
@@ -584,8 +1380,8 @@ def member_leave event_obj
   server_hash = get_server_from_event event_obj
 
   @BOT_OBJ.send_message(server_hash[:default_channel_id],
-    user_hash[:mention] + ' forlot nettopp serveren. Adjø og ha det bra, **' + user_hash[:nick] + '**!' +"\n"+
-    '*(Id: ' + user_hash[:id] + ')*')
+    '**' + user_hash[:nick] + '** forlot nettopp serveren. Adjø og ha det bra, **' + user_hash[:nick] + '**!' +"\n"+
+    '(Id: *' + user_hash[:id] + '*)')
 
   return true
 end
@@ -621,7 +1417,26 @@ def show_help_text event_obj
   server_hash = get_server_from_event event_obj
   
   event_obj.respond 'Created by **Noko** for the **' + server_hash[:servername] + '** server, with inspiration from **Yoshi**.' +"\n"+
-    'Source code for the bot can (soon) be found at:' +"\n"+
+    'Source code for the bot can be found at:' +"\n"+
+    '  https://github.com/Brukarnamn/Bifrost' +"\n"+
+    @BOT_COMMANDS_LIST+
+    'In loving memory of **Askeladden** (2016-2017). Hvil i fred. :sob:'
+
+  return true
+end  
+
+
+
+# Show the help text.
+# @param [EventObject]
+# @return [true]
+def show_expanded_help_text event_obj
+  Debug.trace if @DEBUG
+
+  server_hash = get_server_from_event event_obj
+  
+  event_obj.respond 'Created by **Noko** for the **' + server_hash[:servername] + '** server, with inspiration from **Yoshi**.' +"\n"+
+    'Source code for the bot can be found at:' +"\n"+
     '  https://github.com/Brukarnamn/Bifrost' +"\n"+
     @BOT_COMMANDS_LIST+
     'In loving memory of **Askeladden** (2016-2017). Hvil i fred. :sob:'
@@ -632,8 +1447,9 @@ end
 
 
 # Check what the user typed as a simple one-word command and do appropriately.
+# These are one-word commands that do not parse any arguments.
 # @param [EventObject]
-# @return [true]
+# @return [true,false]
 def handle_simple_messages event_obj
   Debug.trace if @DEBUG
 
@@ -642,22 +1458,69 @@ def handle_simple_messages event_obj
   #channel_hash = get_channel_from_event event_obj
 
   text_command = command_hash[:text]
+
+  ## Spam control
+  #if check_if_user_spam_commands(event_obj, text_command)
+  #else
+  #  # Too spammy.
+  #  return false
+  #end
+  
   case text_command
   when 'PING'
-    event_obj.respond 'Pong ' + user_hash[:mention] + '! *(Id = ' + user_hash[:id] + ')*'
-  when 'HELP'
-    show_help_text event_obj
+    # Shows -1.8 or whatever because the PC-clock is out of sync with Discord's clock.
+    #event_obj.respond 'Pong ' + user_hash[:mention] + '! ' + (Time.now - event_obj.timestamp).to_s + ' (Id = ' + user_hash[:id] + ')'
+    # Wait 60 seconds before removing the message.
+    event_obj.channel.send_temporary_message('Pong ' + user_hash[:mention] + '! (Id = ' + user_hash[:id] + ')', 60) if check_if_user_spam_commands(event_obj, text_command, 5)
+  when 'HELP', 'HJELP'
+    show_help_text(event_obj) if check_if_user_spam_commands(event_obj, text_command, 60)
   when 'BEGINNER', 'INTERMEDIATE',
     'NATIVE', 'NORSK',
     'SVENSK', 'DANSK', 'DANSKER'
-    change_role_permission_on_user event_obj, @USER_ROLE_COMMANDS[text_command], true
+    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, text_command)
   when 'ADVANCED'
-    event_obj.respond 'Dette nivået må du spørre en moderator om, ' + user_hash[:mention]
+    event_obj.respond('Dette nivået må du spørre en moderator om, ' + user_hash[:mention]) if check_if_user_spam_commands(event_obj, text_command)
   when 'NSFW', 'COMP'
     #change_simple_permission_on_user event_obj, @USER_ROLE_COMMANDS[text_command]
-    change_role_permission_on_user event_obj, @USER_ROLE_COMMANDS[text_command]
+    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command]) if check_if_user_spam_commands(event_obj, text_command)
   when 'CHANNELINFO'
-    output_server_and_channel_info event_obj
+    output_server_and_channel_info(event_obj) if check_if_user_spam_commands(event_obj, text_command)
+  when 'SAVE_LOOKUP_TABLE'
+    save_ordbok_dictionary_word_responses_lookup_table if check_if_user_spam_commands(event_obj, text_command, 60)
+  else
+    puts 'Unknown command: ' + command_hash[:orig_text]
+  end
+
+  return true
+end
+
+
+
+def handle_complex_messages event_obj
+  Debug.trace if @DEBUG
+  
+  command_hash = get_message_from_event event_obj
+  user_hash = get_user_from_event event_obj
+  #channel_hash = get_channel_from_event event_obj
+
+  text_command = command_hash[:text]
+
+  ## Spam control
+  #if check_if_user_spam_commands event_obj, text_command
+  #else
+  #  # Too spammy.
+  #  return false
+  #end
+
+  case text_command
+  when 'NB', 'BM', 'BOKMÅL', 'BOKMAL', 'BOKMAAL'
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true, true) if check_if_user_spam_commands(event_obj, text_command, 5)
+  when 'NBK', 'BMK', 'BOKMÅL-KORT', 'BOKMAL-KORT', 'BOKMAAL_KORT', 'BOKMÅL_KORT', 'BOKMAL_KORT', 'BOKMAAL_KORT', 'BOKMÅLKORT', 'BOKMALKORT', 'BOKMAALKORT'
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true) if check_if_user_spam_commands(event_obj, text_command, 5)
+  when 'NN', 'NYNORSK'
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false, true) if check_if_user_spam_commands(event_obj, text_command, 5)
+  when 'NNK', 'NYNORSK-KORT', 'NYNORSK_KORT', 'NYNORSKKORT'
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false) if check_if_user_spam_commands(event_obj, text_command, 5)
   else
     puts 'Unknown command: ' + command_hash[:orig_text]
   end
@@ -684,11 +1547,16 @@ def init_bot
     member_leave event_obj
   end
 
-  bot_command_regexp_roles = (@BOT_INVOKE_CHARACTER+'[a-zA-Z]+').freeze
+  bot_command_regexp_roles = (@BOT_INVOKE_CHARACTER+'[a-zA-Z\-_]+').freeze
   @BOT_OBJ.message(exact_text: %r{^#{bot_command_regexp_roles}$}) do |event_obj|
     handle_simple_messages event_obj
   end
 
+  bot_command_regexp_dictionary_lookup = (@BOT_INVOKE_CHARACTER+'[a-zA-ZæøåÆØÅ\-_]+(\s+\S+)+').freeze
+  @BOT_OBJ.message(exact_text: %r{^#{bot_command_regexp_dictionary_lookup}$}) do |event_obj|
+    handle_complex_messages event_obj
+  end
+    
   return @BOT_OBJ
 end
 
