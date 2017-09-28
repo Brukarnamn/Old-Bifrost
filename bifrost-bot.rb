@@ -1128,7 +1128,7 @@ def ordbok_uib_no_dictionary_lookup_wrapper event_obj, search_string, is_bokmål
   # contain upper case letters can't be found.
   # Unless regular search is turn on, but then you get multiple search hits for words.
   search_string = search_string.downcase
-  encoded_search_string = URI::encode(search_string).downcase
+  encoded_search_string = (is_bokmål ? 'nb' : 'nn') + '_' + URI::encode(search_string).downcase
   
   if @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE[encoded_search_string].nil?
     word_response_hash = ordbok_uib_no_dictionary_lookup search_string, is_bokmål
