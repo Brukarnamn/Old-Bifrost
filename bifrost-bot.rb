@@ -1474,12 +1474,16 @@ def handle_simple_messages event_obj
     event_obj.channel.send_temporary_message('Pong ' + user_hash[:mention] + '! (Id = ' + user_hash[:id] + ')', 60) if check_if_user_spam_commands(event_obj, text_command, 5)
   when 'HELP', 'HJELP'
     show_help_text(event_obj) if check_if_user_spam_commands(event_obj, text_command, 60)
-  when 'BEGINNER', 'INTERMEDIATE',
-    'NATIVE', 'NORSK',
-    'SVENSK', 'DANSK', 'DANSKER'
+  when 'BEGINNER', 'INTERMEDIATE'
     change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, text_command)
   when 'ADVANCED'
     event_obj.respond('Dette nivået må du spørre en moderator om, ' + user_hash[:mention]) if check_if_user_spam_commands(event_obj, text_command)
+  when 'NATIVE', 'NORSK'
+    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'NORSK')
+  when 'SVENSK'
+    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'SVENSK')
+  when 'DANSK', 'DANSKER'
+    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'DANSK')
   when 'NSFW', 'COMP'
     #change_simple_permission_on_user event_obj, @USER_ROLE_COMMANDS[text_command]
     change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command]) if check_if_user_spam_commands(event_obj, text_command)
@@ -1514,13 +1518,13 @@ def handle_complex_messages event_obj
 
   case text_command
   when 'NB', 'BM', 'BOKMÅL', 'BOKMAL', 'BOKMAAL'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true, true) if check_if_user_spam_commands(event_obj, text_command, 5)
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
   when 'NBK', 'BMK', 'BOKMÅL-KORT', 'BOKMAL-KORT', 'BOKMAAL_KORT', 'BOKMÅL_KORT', 'BOKMAL_KORT', 'BOKMAAL_KORT', 'BOKMÅLKORT', 'BOKMALKORT', 'BOKMAALKORT'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true) if check_if_user_spam_commands(event_obj, text_command, 5)
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
   when 'NN', 'NYNORSK'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false, true) if check_if_user_spam_commands(event_obj, text_command, 5)
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
   when 'NNK', 'NYNORSK-KORT', 'NYNORSK_KORT', 'NYNORSKKORT'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false) if check_if_user_spam_commands(event_obj, text_command, 5)
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
   else
     puts 'Unknown command: ' + command_hash[:orig_text]
   end
