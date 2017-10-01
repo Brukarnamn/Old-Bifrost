@@ -4,6 +4,8 @@
   Requires the discordrb module and its dependencies.
     https://github.com/meew0/discordrb
   Requires json module to read in personal server keys.
+  Requires nokogiri to parse the web pages.
+  Requires imgkit and its dependencies to convert from html to image.
 
   In Windows, open "Command Prompt with Ruby".
 
@@ -26,7 +28,7 @@
     SEND_MESSAGES         0x00000800	Allows for sending messages in a channel
     READ_MESSAGE_HISTORY  0x00010000	Allows for reading of message history
     CHANGE_NICKNAME       0x04000000	Allows for modification of own nickname
-    MANAGE_ROLES *        0x10000000	Allows management and editing of roles
+    MANAGE_ROLES          0x10000000	Allows management and editing of roles
 
   then a server owner/admin have to invite the bot:
     https://discordapp.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=0
@@ -74,19 +76,11 @@ end
 @DEBUG = true.freeze
 @DEBUG_SPAMMY = false.freeze
 
-@TEST = true.freeze;
-@BOT_RUNS_ON_SERVER_ID = (@TEST ? '348172070947127306'.freeze :   #MinEgenTestserver
-                                  '202189706383982605'.freeze)    #ENLE-server
+# Is the bot running on the test server or the live server.
+@TEST = (ARGV.length > 0 ? false.freeze : true.freeze)
 
-# The folder where the bot should store the images fetched from the web.
-@WORD_INFLECTION_IMAGE_PATH = (@TEST ? 'd:/bifrost-discordbot'.freeze :
-                                       'c:/bifrost-discordbot'.freeze)
-
-# The location of the html-to-image executable. Needed if the bot is running on Windows.
-@WKHTMLTOIMAGE_EXE_PATH = 'C:/bin/wkhtmltopdf/bin/wkhtmltoimage.exe'.freeze
-
-# The character that all the bot commands must start with.
-@BOT_INVOKE_CHARACTER = '!'.freeze
+# The Discord Bot object
+@BOT_OBJ = nil
 
 # Accept only space
 # dot .
@@ -95,151 +89,243 @@ end
 # unicode digits     \p{N}
 @ILLEGAL_DICTIONARY_SEARCH_CHARACTERS = /[^ \.\p{L}\p{M}]/.freeze
 
-#
 # The settings read from the configuration files.
 # And other global variables.
-#
-@BOT_SETTINGS_HASH = {}
-@THIS_SERVER_SETTINGS_HASH = {}
-@ALL_SERVER_SETTINGS_HASH = {}
-
-# The Discord Bot object
-@BOT_OBJ = nil
+@GLOBAL_SETTINGS_HASH = {}
 
 # Hash containing user ids and when they last issued a bot command. To prevent them spamming commands.
-@USER_BOT_INVOKES = {}
+@USERS_BOT_INVOKES = {}
 
-# Maximum commands per time frame. Need to be greater than 2, or some if tests fail. ;-)
-@USER_MAX_BOT_INVOKES_PER_TIME_LIMIT = 5.freeze
+# Hash containing user ids and the current exercise they are doing.
+@USERS_EXERCISE_HASH = {}
 
-# Maximum commands during this time frame.
-@BOT_INVOKES_TIME_FRAME_LIMIT = 60.freeze
-
-# Hash container the dictionary responses. To prevent asking about the same stuff multiple times.
+# Hash containing the dictionary responses. To prevent asking about the same stuff multiple times.
 @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE = {}
 
-# The CSS used for the generation of html-to-image.
-@ORDBOK_DICTIONARY_CSS = nil;
-
-# Hash containing the user command name for adding/removing a role, and its corresponding Discord server's role name.
-# Will be changed to all uppercase letters.
-@USER_ROLE_COMMANDS = {}
-
-# Array containing a list of the server roles the user can only have one of at the same time. Setting one of them should remove the others.
-# Will be changed to all uppercase letters.
-@USER_EXCLUSIVE_ROLES = []
-
-# The channel id of the default channel the bot should send messages to. Like join and leave messages and other future stuff.
-@SERVER_DEFAULT_CHANNEL_ID = nil
-
-# The channel id of the channel the bot should send all its role modification messages to.
-# @SERVER_DEFAULT_CHANNEL_ID will be used if this one is not set.
-@SERVER_ROLE_SPAM_CHANNEL_ID = nil
-
-# List of commands for the help text.
-# Might or might not actually correspond to the commands the bot itself responds to.
-@BOT_COMMANDS_LIST = <<'MULTI_LINE_HELP_TEXT'
-Currently supported commands are:
-`!help`         This text.
-`!beginner`     Set/remove the beginner-role for you. If you have just started learning Norwegian.
-`!intermediate` Set/remove the intermediate-role for you. If you know all the basics of Norwegian, but still lack vocabulary and the occasional grammar.
-`!advanced`     Ask a moderator. This role is if you are near-fluent in Norwegian.
-`!native`       Set/remove the native-role. If Norwegian is your native language.
-`!nsfw`         Set/remove the NSFW-role. If you are interested in off-topic meme-postings.
-`!comp`         Set/remove the Computer-Wannabe-role. If you are above average interested in computer stuff.
-MULTI_LINE_HELP_TEXT
 
 
 
 # Read in the settings in the two configuration files.
 # Fill in the global variables (for easier use and less error handling and modifications later.)
-#
 # @return [true] Returns true if everything went as planned.
-def load_settings
+def load_settings command_line_arguments
   Debug.trace if @DEBUG
   returnval = true
+  Debug.inspect command_line_arguments if @DEBUG
 
   bot_settings_filename = './bot_settings' + (@TEST ? '_dev' : '') + '.json'
   file_contents = File.read(bot_settings_filename)
-  @BOT_SETTINGS_HASH = JSON.parse(file_contents)
+  bot_settings_hash = JSON.parse(file_contents)
 
   file_contents = File.read('./server_settings.json')
-  @ALL_SERVER_SETTINGS_HASH = JSON.parse(file_contents)
+  all_server_settings_hash = JSON.parse(file_contents)
 
-  @ORDBOK_DICTIONARY_CSS = File.read('./ordbok_uib_no.css')
-
-  # Only get the settings for the server the bot should respond on.
-  # Don't want our testing to interfere on the live servers.
-  @THIS_SERVER_SETTINGS_HASH = @ALL_SERVER_SETTINGS_HASH[@BOT_RUNS_ON_SERVER_ID]
-
-  # Some sanity checking, maybe.
-  #   if @DEBUG
-  #   if @DEBUG && false
-  # Change if it really should be shown after all.
-  if @DEBUG && false
-    #Debug.divider if @DEBUG
-
-    @BOT_SETTINGS_HASH.each do |key,value|
-      puts "#{key} => #{value}"
-    end
-
-    @THIS_SERVER_SETTINGS_HASH.each do |key,value|
-      puts "#{key} => #{value}"
+  this_server_settings_hash = {}
+  # Copy over all the non-specific server settings to the server specific one.
+  all_server_settings_hash.each do |key,value|
+    case key
+    when /^\d+$/
+      # Ignore. Settings for a specific server id.
+    else
+      this_server_settings_hash[:"#{key}"] = value
     end
   end
 
-  # Loop over all the server ids and the data in them.
-  #
-  #@ALL_SERVER_SETTINGS_HASH.each do |server_id,server_data|
+  # Find out the server id the bot will run on.
+  test_server_id = this_server_settings_hash[:test_server]
+  live_server_id = this_server_settings_hash[:live_server]
+  if @TEST
+    bot_runs_on_server_id = test_server_id
+    #Debug.inspect 'Bot will run on the Test-Server: ' + bot_runs_on_server_id.to_s
+  else
+    bot_runs_on_server_id = live_server_id
+    Debug.inspect 'Bot will run on the LIVE-server: ' + bot_runs_on_server_id.to_s
+  end
+  this_server_settings_hash[:bot_runs_on_server_id] = bot_runs_on_server_id
+
+  admin_system_code = generate_new_system_code
+  Debug.inspect admin_system_code, 0, true, 'Starting system code: '
+  
+  # Copy over the settings for the server the bot should respond on.
+  # Don't want our testing to interfere on the live servers.
+  # Server-id needs to be converted to a string, since the JSON key can't be a number. Might get nil otherwise.
+  all_server_settings_hash[bot_runs_on_server_id.to_s].each { |key,value| this_server_settings_hash[:"#{key}"] = value }
+
+  # Copy over the bot secret keys.
+  bot_settings_hash.each { |key,value| this_server_settings_hash[:"#{key}"] = value }
+  
+  # The CSS used for the generation of html-to-image.
+  ordbok_dictionary_css = File.read(this_server_settings_hash[:ordbok_dictionary_css_file_path])
+  this_server_settings_hash[:ordbok_dictionary_css] = ordbok_dictionary_css
+
+  # The text for the help texts, faqs, and so on.
+  bot_text_contents = load_text_contents_file this_server_settings_hash[:bot_texts_file]
+  if bot_text_contents[:status]
+    bot_text_contents = bot_text_contents[:contents]
+    this_server_settings_hash[:bot_texts] = bot_text_contents
+  else
+    raise bot_text_contents[:error]
+  end
+  
+  # Some sanity checking, maybe.
+  #Debug.inspect bot_text_contents if @DEBUG
+  #Debug.inspect this_server_settings_hash if @DEBUG
+
+  # Loop over the active server id and the data in it.
   [1].each do
     #Debug.divider if @DEBUG
-    #puts "#{server_id} => #{server_data}"
-
+    user_role_commands = {}
     # User commands and the corresponding user role.
-    if !@THIS_SERVER_SETTINGS_HASH['roles'].nil?
-      @THIS_SERVER_SETTINGS_HASH['roles'].each do |key,value|
-        #puts "#{key} => #{value}"
-        @USER_ROLE_COMMANDS[key.upcase] = value.upcase
-      end
-    else
+    if this_server_settings_hash[:roles].nil?
       returnval = false
+    else
+      this_server_settings_hash[:roles].each do |key,value|
+        #puts "#{key} => #{value}" if @DEBUG
+        user_role_commands[key.upcase] = value.upcase
+      end
+      this_server_settings_hash[:uc_user_role_commands] = user_role_commands
     end
 
+    user_exclusive_roles = []
     # User roles the user can only have one of at the same time.
-    if !@THIS_SERVER_SETTINGS_HASH['exclusive_roles'].nil?
-      #puts @THIS_SERVER_SETTINGS_HASH['exclusive_roles'].inspect
-      @THIS_SERVER_SETTINGS_HASH['exclusive_roles'].each do |key|
-        @USER_EXCLUSIVE_ROLES.push key.upcase
-      end
-    else
+    if this_server_settings_hash[:exclusive_roles].nil?
       returnval = false
+    else
+      this_server_settings_hash[:exclusive_roles].each do |key|
+        #puts "#{key}" if @DEBUG
+        user_exclusive_roles.push key.upcase
+      end
+      this_server_settings_hash[:uc_user_exclusive_roles] = user_exclusive_roles
     end
 
     # Default chat channel for the bot.
-    if @THIS_SERVER_SETTINGS_HASH['default_channel_id'].nil?
+    if this_server_settings_hash[:default_channel_id].nil? || this_server_settings_hash[:default_channel_id] < 1
       puts 'WARNING: Bot is missing a default channel to send messages to.'
       returnval = false
     else
-      @SERVER_DEFAULT_CHANNEL_ID = @THIS_SERVER_SETTINGS_HASH['default_channel_id']
     end
 
     # Channel for role modification responses.
-    if @THIS_SERVER_SETTINGS_HASH['role_spam_channel_id'].nil?
-      @SERVER_ROLE_SPAM_CHANNEL_ID = @SERVER_DEFAULT_CHANNEL_ID
+    if this_server_settings_hash[:role_spam_channel_id].nil? || this_server_settings_hash[:role_spam_channel_id] < 1
+      this_server_settings_hash[:role_spam_channel_id] = this_server_settings_hash[:default_channel_id]
     else
-      @SERVER_ROLE_SPAM_CHANNEL_ID = @THIS_SERVER_SETTINGS_HASH['role_spam_channel_id']
+    end
+
+    # Channel for role modification responses.
+    if this_server_settings_hash[:exercises_channel_id].nil? || this_server_settings_hash[:exercises_channel_id] < 1
+      this_server_settings_hash[:exercises_channel_id] = this_server_settings_hash[:default_channel_id]
+    else
     end
   end
 
-  if @DEBUG
+  @GLOBAL_SETTINGS_HASH = this_server_settings_hash
+  if @DEBUG && false
     Debug.divider if @DEBUG
-    puts @USER_ROLE_COMMANDS.inspect
-    puts @USER_EXCLUSIVE_ROLES.inspect
-    puts @SERVER_DEFAULT_CHANNEL_ID
-    puts @SERVER_ROLE_SPAM_CHANNEL_ID
+    Debug.inspect @GLOBAL_SETTINGS_HASH
   end
 
   return returnval
+end
+
+
+
+# Read in the content of the additional text file that contains the help texts, faqs, exercises, and more.
+# @return [true] Returns true if everything went as planned.
+def load_text_contents_file input_file
+  Debug.trace if @DEBUG
+  returnval = {
+    status: false,
+    error: '',
+    contents: {},
+  }
+
+  begin
+    if !File.file?(input_file)
+      raise 'No such file or directory: ' + input_file
+    else
+      file_contents = File.read(input_file)
+      returnval[:contents] = JSON.parse(file_contents)
+    end
+  rescue JSON::ParserError => e
+    #<JSON::ParserError: 765: unexpected token at ''>
+    returnval[:error] = 'JSON::ParserError in: ' + input_file
+    return returnval
+  rescue Exception => e
+    # Some error.
+    #<Errno::ENOENT: No such file or directory @ rb_sysopen - N:/Ruby/Dis...bot.rb>
+    puts e.inspect
+    returnval[:error] = e.inspect.to_s
+    return returnval
+  ensure
+    # This will always be done.
+  end
+
+  returnval[:status] = true
+  #Debug.inspect returnval if @DEBUG
+  return returnval
+end
+
+
+
+# Read in the content of the additional text file that contains the help texts, faqs, exercises, and more.
+# @return [true] Returns true if everything went as planned.
+def reload_text_contents_file_and_merge input_file, hash_key_symbol_to_overwrite
+  Debug.trace if @DEBUG
+  returnval = {
+    status: false,
+    error: '',
+  }
+
+  begin
+    if !File.file?(input_file)
+      raise 'No such file or directory: ' + input_file
+    else
+      file_contents = File.read(input_file)
+      file_contents_hash = JSON.parse(file_contents)
+    end
+  rescue JSON::ParserError => e
+    #<JSON::ParserError: 765: unexpected token at ''>
+    returnval[:error] = 'JSON::ParserError in: ' + input_file
+    return returnval
+  rescue Exception => e
+    # Some error.
+    #<Errno::ENOENT: No such file or directory @ rb_sysopen - N:/Ruby/Dis...bot.rb>
+    puts e.inspect
+    returnval[:error] = e.inspect.to_s
+    return returnval
+  ensure
+    # This will always be done.
+  end
+
+  @GLOBAL_SETTINGS_HASH[:"#{hash_key_symbol_to_overwrite}"] = file_contents_hash
+
+  returnval[:status] = true
+  if @DEBUG && false
+    Debug.divider
+    Debug.inspect @GLOBAL_SETTINGS_HASH
+    #Debug.inspect returnval
+  end
+  return returnval
+end
+
+
+
+def generate_new_system_code
+  #Debug.trace if @DEBUG
+
+  # Generate the alphabet from a - z, æ, ø, å
+  alphabet = [*('a'..'z'),"æ","ø","å"]
+
+  admin_system_code = ''
+
+  # Pick a random number number from between 1..29
+  # and use thus number as index in the alphabet array to
+  # generate a random 3 letter code.
+  3.times { |i| admin_system_code += alphabet[Random.new.rand(0..(alphabet.length-1))] }
+
+  @GLOBAL_SETTINGS_HASH[:bot_system_code] = admin_system_code
+
+  return admin_system_code
 end
 
 
@@ -291,11 +377,14 @@ def get_user_from_event event_obj
   user_obj = nil;
   user_roles = {}
   returnval = {
-    username: '<Someone>',
+    nick: '<Someone>',
     discriminator: -1,
+    username: '<Someone>#-1',
     id: -1,
     mention: '',
     roles: user_roles,
+    channel_id: -1,
+    server_id: -1,
     obj: nil,
   }
 
@@ -305,19 +394,21 @@ def get_user_from_event event_obj
   when Discordrb::Events::ServerMemberAddEvent,       # Someone joins
        Discordrb::Events::ServerMemberUpdateEvent,    # Roles gets added/deleted
        Discordrb::Events::ServerMemberDeleteEvent     # Someone leaves
-       user_obj = event_obj.user
+    user_obj = event_obj.user
   else
     puts 'Unknown event type! ' + event_obj.class.to_s
   end
-  #puts user_obj.inspect
 
   if !user_obj.nil?
     returnval[:nick] = user_obj.username.to_s
     returnval[:discriminator] = user_obj.discriminator.to_s
     returnval[:username] = user_obj.username.to_s + '#' + user_obj.discriminator.to_s
-    returnval[:id] = user_obj.id.to_s
+    returnval[:id] = user_obj.id
     returnval[:mention] = user_obj.mention.to_s
 
+    returnval[:channel_id] = event_obj.channel.id if event_obj.respond_to?('channel') && !event_obj.channel.nil?
+    returnval[:server_id] = event_obj.server.id if event_obj.respond_to?('server') && !event_obj.server.nil?
+    
     # Loop over the current roles this user has, and add them in an upper case text
     if user_obj.respond_to?('roles') && !user_obj.roles.nil?
       user_obj.roles.each do |role_obj|
@@ -329,7 +420,7 @@ def get_user_from_event event_obj
     #returnval[:obj] = user_obj
   end
 
-  puts returnval.inspect if @DEBUG
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -345,17 +436,18 @@ def get_channel_from_event event_obj
   returnval = {
     channelname: '<Somewhere>',
     id: -1,
+    server_id: -1,
     obj: nil,
   }
-  #puts channel_obj.inspect
 
   if !channel_obj.nil?
     returnval[:channelname] = channel_obj.name.to_s
-    returnval[:id] = channel_obj.id.to_s
+    returnval[:id] = channel_obj.id
+    returnval[:server_id] = event_obj.server.id if event_obj.respond_to?('server') && !event_obj.server.nil?
     #returnval[:obj] = channel_obj
   end
 
-  puts returnval.inspect if @DEBUG
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -373,24 +465,22 @@ def get_server_from_event event_obj
     id: -1,
     default_channel_id: -1,
     role_spam_channel_id: -1,
+    exercises_channel_id: -1,
     obj: nil,
   }
-  #puts server_obj.inspect
 
   if !server_obj.nil?
-    server_id_data = @ALL_SERVER_SETTINGS_HASH[server_obj.id.to_s]
-    #puts @ALL_SERVER_SETTINGS_HASH.inspect
-    #puts server_obj.id.to_s
-    #puts server_id_data.inspect
+    server_id_data = @GLOBAL_SETTINGS_HASH
 
     returnval[:servername] = server_obj.name.to_s
     returnval[:id] = server_obj.id.to_s
-    returnval[:default_channel_id] = server_id_data['default_channel_id']
-    returnval[:role_spam_channel_id] = server_id_data['role_spam_channel_id'] || server_id_data['default_channel_id']
+    returnval[:default_channel_id] = server_id_data[:default_channel_id]
+    returnval[:role_spam_channel_id] = server_id_data[:role_spam_channel_id]
+    returnval[:exercises_channel_id] = server_id_data[:exercises_channel_id]
     #returnval[:obj] = server_obj
   end
 
-  puts returnval.inspect if @DEBUG
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -406,26 +496,46 @@ def get_message_from_event event_obj
   text_message_obj = event_obj.message
   text_message_content = event_obj.message.content
   returnval = {
-    text: 'HELP',
+    text: '',
     args: [],
-    typed_channel_id: -1,
+    user_id: -1,
+    channel_id: -1,
+    server_id: -1,
     orig_text: text_message_content,
   }
-  puts text_message_obj.inspect
 
-  if !text_message_content.nil? && (text_message_content.length > 0) && text_message_content[0] == @BOT_INVOKE_CHARACTER
-    # Remove the first character and turn it all into upper case letters.
-    text_string = text_message_content[1..-1] || ''
+  if !text_message_content.nil? && (text_message_content.length > 0)
+    case event_obj
+    when Discordrb::Events::MessageEvent
+      user_obj = event_obj.author
+    when Discordrb::Events::ServerMemberAddEvent,      # Someone joins
+        Discordrb::Events::ServerMemberUpdateEvent,    # Roles gets added/deleted
+        Discordrb::Events::ServerMemberDeleteEvent     # Someone leaves
+      user_obj = event_obj.user
+    else
+      puts 'Unknown event type! ' + event_obj.class.to_s
+    end
+    returnval[:user_id] = user_obj.id if !user_obj.nil?
+    returnval[:channel_id] = event_obj.channel.id if event_obj.respond_to?('channel') && !event_obj.channel.nil?
+    returnval[:server_id] = event_obj.server.id if event_obj.respond_to?('server') && !event_obj.server.nil?
+
+    if @GLOBAL_SETTINGS_HASH[:bot_runs_on_server_id] == returnval[:server_id] &&
+       @GLOBAL_SETTINGS_HASH[:bot_invoke_character] == text_message_content[0]
+      # If the command was in a server channel, then
+      # remove the first character and turn it all into upper case letters.
+      text_string = text_message_content[1..-1] || ''
+    else
+      text_string = text_message_content || ''
+    end
     text_array = text_string.split(/\s+/)
     #puts text_string.inspect
     #puts text_array.inspect
 
     returnval[:text] = text_array[0].upcase || 'HELP'
     returnval[:args] = text_array[1..-1]    || ''
-    returnval[:typed_channel_id] = text_message_obj.channel.id.to_s
   end
 
-  puts returnval.inspect if @DEBUG
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -450,15 +560,7 @@ def get_server_roles_from_event event_obj
     end
   end
 
-  if @DEBUG
-    returnval.each do |key,value|
-      #puts "#{key} => #{value}"
-      puts "#{key} => "+
-        "{ :name => #{value[:name]},"+
-        " :obj => #{value[:obj].class.to_s}"+
-        " }"
-    end
-  end
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -563,8 +665,8 @@ def change_role_permission_on_user event_obj, permission_role, remove_conflictin
   user_hash = get_user_from_event event_obj
   server_hash = get_server_from_event event_obj
   server_roles_hash = get_server_roles_from_event event_obj
-  puts permission_role.inspect if @DEBUG
-  #puts server_roles_hash[permission_role].inspect if @DEBUG
+  #Debug.inspect permission_role if @DEBUG
+  #Debug.inspect server_roles_hash[permission_role] if @DEBUG
 
   # Check if the permission role exist on the server.
   if server_roles_hash[permission_role].nil?
@@ -583,7 +685,7 @@ def change_role_permission_on_user event_obj, permission_role, remove_conflictin
       # If it is one of the roles that you can only have one of, then go through them all
       # and make sure the user only has one of them.
       if remove_conflicting_roles
-        @USER_EXCLUSIVE_ROLES.each do |role_name|
+        @GLOBAL_SETTINGS_HASH[:uc_user_exclusive_roles].each do |role_name|
           next if role_name == permission_role
           #puts role_name if @DEBUG
           if user_hash[:roles][role_name].nil? || user_hash[:roles][role_name] == false
@@ -648,10 +750,10 @@ def ordbok_uib_no_dictionary_lookup search_string, is_bokmål = true
     'OPP=' + search_string + '',
   ].join('&'))
 
-  ordbok_word_html_page_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+  ordbok_word_html_page_name = @GLOBAL_SETTINGS_HASH[:word_inflection_image_path] + '/' +
     'ordbok_' + search_string.to_s + '_'+ (is_bokmål ? 'nb' : 'nn') + '.html'
 
-  puts dictionary_url.inspect if @DEBUG
+  Debug.inspect dictionary_url if @DEBUG
   
   begin
     if File.file?(ordbok_word_html_page_name)
@@ -860,24 +962,8 @@ def ordbok_uib_no_dictionary_lookup search_string, is_bokmål = true
     i += 1
   end
 
-  if @DEBUG && false
-    word_hash.each do |index,word_data|
-      if word_data.is_a?(Integer) ||
-        word_data.is_a?(String) ||
-        word_data.is_a?(Time)
-       puts "----- #{index}: #{word_data}"
-      elsif word_data.is_a?(Hash)
-        puts "----- #{index} -----"
-        word_data.each do |key,value|
-          puts "#{key}: #{value}"
-        end
-      else
-        puts word_data.class
-      end
-    end
-  end
-
   returnval = word_hash
+  #Debug.inspect returnval if @DEBUG
   return returnval
 end
 
@@ -1021,10 +1107,10 @@ def ordbok_uib_no_dictionary_inflection_lookup word_id, is_bokmål = true, defau
     (is_bokmål ? 'bob' : 'nob') + '_hente_paradigme.cgi?' +
     'lid=' + word_id.to_s)
 
-  inflection_image_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+  inflection_image_name = @GLOBAL_SETTINGS_HASH[:word_inflection_image_path] + '/' +
     (is_bokmål ? 'nb' : 'nn') + '_bøyningsmønster_' + word_id.to_s + '.jpg'
 
-  inflection_html_page_name = @WORD_INFLECTION_IMAGE_PATH + '/' +
+  inflection_html_page_name = @GLOBAL_SETTINGS_HASH[:word_inflection_image_path] + '/' +
     (is_bokmål ? 'nb' : 'nn') + '_bøyningsmønster_' + word_id.to_s + '.html'
 
   puts "LOOKUP: #{inflection_image_name} | #{dictionary_inflection_url}" if @DEBUG
@@ -1054,7 +1140,7 @@ def ordbok_uib_no_dictionary_inflection_lookup word_id, is_bokmål = true, defau
     # This will always be done.
   end
 
-  dictionary_inflection_page_css = @ORDBOK_DICTIONARY_CSS
+  dictionary_inflection_page_css = @GLOBAL_SETTINGS_HASH[:ordbok_dictionary_css]
   #  dictionary_inflection_page_css = <<'PAGE_CSS'
   #PAGE_CSS
 
@@ -1075,7 +1161,7 @@ def ordbok_uib_no_dictionary_inflection_lookup word_id, is_bokmål = true, defau
 
   # config/initializers/imgkit.rb
   IMGKit.configure do |config|
-    config.wkhtmltoimage = @WKHTMLTOIMAGE_EXE_PATH
+    config.wkhtmltoimage = @GLOBAL_SETTINGS_HASH[:wkhtmltoimage_exe_path]
     config.default_options = {
       width:    default_image_width,
       'enable-smart-width': 1,
@@ -1146,22 +1232,7 @@ def ordbok_uib_no_dictionary_lookup_wrapper event_obj, search_string, is_bokmål
     word_response_hash = @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE[encoded_search_string]
   end
 
-  if @DEBUG
-    word_response_hash.each do |index,word_data|
-      if word_data.is_a?(Integer) ||
-         word_data.is_a?(String) ||
-         word_data.is_a?(Time)
-        puts "----- #{index}: #{word_data}"
-      elsif word_data.is_a?(Hash)
-        puts "----- #{index} -----"
-        word_data.each do |key,value|
-          puts "#{key}: #{value}"
-        end
-      else
-        puts word_data.class
-      end
-    end
-  end
+  Debug.inspect word_response_hash if @DEBUG
 
   word_count = word_response_hash[:length] || 0
   ordbok_url = word_response_hash[:url] || ''
@@ -1233,7 +1304,7 @@ def ordbok_uib_no_dictionary_lookup_wrapper event_obj, search_string, is_bokmål
   end #if
 
   event_obj.channel.send_embed( '**' + author_str + '**: Official spellings and inflections:' +"\n"+ordbok_url_simple ) do |embed|
-    embed.colour = 0x490506
+    embed.colour = @GLOBAL_SETTINGS_HASH[:bot_text_embed_color]
     #embed.author = Discordrb::Webhooks::EmbedAuthor.new(name: search_string + ' (click me)', url: ordbok_url)
     embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: footer_str)
     #embed.timestamp = timestamp
@@ -1251,14 +1322,208 @@ end
 
 
 # Dumps the hash table for the dictionary entries from memory to the screen/log file.
+# TODO: Have it write to file.
 # TODO: Ability to read it back in.
 def save_ordbok_dictionary_word_responses_lookup_table
   Debug.trace if @DEBUG
   Debug.divider
   
+  #Debug.inspect @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE
   puts @ORDBOK_DICTIONARY_WORD_RESPONSES_LOOKUP_TABLE.inspect
 
   return true
+end
+
+
+
+# Creates a Discord embedded text blob and shows it.
+def create_and_send_discord_embed event_obj, embed_text_info_hash
+  Debug.trace if @DEBUG
+  #puts embed_text_info_hash.inspect if @DEBUG
+
+  hash_embed_content = embed_text_info_hash['content']
+  hash_embed_title = embed_text_info_hash['title']
+  hash_embed_title_url = embed_text_info_hash['title_url']
+  hash_embed_description = embed_text_info_hash['description']
+  hash_embed_fields = embed_text_info_hash['fields']
+  hash_embed_footer = embed_text_info_hash['footer']
+
+  event_obj.channel.send_embed(hash_embed_content) do |embed|
+    embed.colour = @GLOBAL_SETTINGS_HASH[:bot_text_embed_color]
+
+    #puts hash_embed_title.inspect
+    #puts hash_embed_title_url.inspect
+    embed.title = hash_embed_title if hash_embed_title
+    embed.url = hash_embed_title_url if hash_embed_title_url
+
+    if hash_embed_description && hash_embed_description.is_a?(Array)
+      #puts hash_embed_description.join('\n').inspect
+      embed.description = hash_embed_description.join("\n")
+    end
+
+    #puts hash_embed_fields.inspect
+    if hash_embed_fields && hash_embed_fields.length > 0
+      hash_embed_fields.each do |single_field|
+        #puts single_field.inspect
+        if single_field['name'] && single_field['value'] && single_field['value'].is_a?(Array)
+          embed.add_field(name: single_field['name'], value: single_field['value'].join("\n"), inline: single_field['inline'])
+        end
+      end
+    end
+
+    #puts hash_embed_footer.inspect
+    if hash_embed_footer
+      if hash_embed_footer['text']
+        embed.footer = Discordrb::Webhooks::EmbedFooter.new(text: hash_embed_footer['text'], icon_url: hash_embed_footer['icon_url'])
+      end
+      embed.timestamp = hash_embed_footer['timestamp'] if hash_embed_footer['timestamp']
+    end
+  end
+
+  return true
+end
+
+
+
+def choose_norwegian_exercise event_obj
+  Debug.trace if @DEBUG
+
+  command_hash = get_message_from_event event_obj
+  user_id = command_hash[:user_id]
+  exercises_hash = @GLOBAL_SETTINGS_HASH[:bot_texts]['øvelser']
+  #Debug.inspect command_hash
+  #Debug.inspect exercises_hash
+
+  exercise_variations = exercises_hash.keys
+  variation_number = Random.new.rand(0..(exercise_variations.length-1))
+
+  exercises_to_choose_from = exercises_hash[exercise_variations[variation_number]]
+  exercise_number = Random.new.rand(0..(exercises_to_choose_from.length-1))
+
+  chosen_exercise = exercises_to_choose_from[exercise_number]
+
+  case exercise_variations[variation_number]
+  when 'preposisjoner'
+    title_text = 'Velg riktig preposisjon / Choose the correct preposition'
+    task_text = 'Insert the missing preposition in the sentence below.'+"\n"+'(fra | til | i | rundt | for | på | under | over | foran | bak | ved siden av | med)'
+  else
+    title_text = 'Uncategorized'
+    task_text = 'Insert the missing word(s) in the sentence below.'
+  end
+  
+  chosen_exercise['text_header'] = title_text
+  chosen_exercise['text_start'] = task_text
+  chosen_exercise['text_id'] = 'Seksjon ' + (variation_number+1).to_s + ' oppgave ' + (exercise_number+1).to_s
+
+  @USERS_EXERCISE_HASH[user_id] = chosen_exercise
+  #Debug.inspect @USERS_EXERCISE_HASH[user_id]
+
+  show_norwegian_exercise event_obj
+
+  return true
+end
+
+
+
+def show_norwegian_exercise event_obj
+  Debug.trace if @DEBUG
+
+  command_hash = get_message_from_event event_obj
+  user_id = command_hash[:user_id]
+  #Debug.inspect command_hash
+  #Debug.inspect exercises_hash
+
+  chosen_exercise = @USERS_EXERCISE_HASH[user_id]
+  #Debug.inspect @USERS_EXERCISE_HASH[user_id]
+
+  if chosen_exercise.nil? || chosen_exercise.keys.length < 1
+    event_obj.respond('You have not started on any (new) exercises yet.')
+    return false
+  end
+  
+  exercise_text_hash = {}
+  exercise_text_hash['title'] = chosen_exercise['text_header']
+  exercise_text_hash['description'] = [
+    chosen_exercise['text_start'],
+    '',
+    chosen_exercise['sentence'],
+    (chosen_exercise['meaning'] && chosen_exercise['meaning'].length > 0 ? ('*'+chosen_exercise['meaning']+'*') : '*Translation missing.*'),
+    '',
+    'Answer by either responding in',
+    '1) A private message with `svar <your answer>`',
+    'or 2) In the server channel with `!svar <your answer>` (note the `!`)',
+    'Replace `<your answer>` with the Norwegian word(s) you think is correct.',
+    '',
+    'To get a new exercise you can type the starting command in here, but without the `!` at the start. For example `test`.',
+  ]
+  exercise_text_hash['footer'] = chosen_exercise['text_id']
+  #create_and_send_discord_embed(event_obj, exercise_text_hash)
+  #Debug.inspect exercise_text_hash if @DEBUG
+  puts (command_hash[:user_id].to_s) + ' -> ' + chosen_exercise['text_id'] if @DEBUG
+  
+  message_text = [
+    '**'+exercise_text_hash['title']+'**',
+    exercise_text_hash['description'].join("\n"),
+    '*'+exercise_text_hash['footer']+'*',
+  ].join("\n")
+
+  if command_hash[:server_id] == @GLOBAL_SETTINGS_HASH[:bot_runs_on_server_id]
+    event_obj.author.pm(message_text)
+    event_obj.channel.send_temporary_message('<@'+(command_hash[:user_id].to_s)+'>, please check your private messages.', 10)
+  else
+    event_obj.respond(message_text)
+  end
+
+  return true
+end
+
+
+
+def user_response_to_norwegian_exercise event_obj, answer_str
+  Debug.trace if @DEBUG
+
+  command_hash = get_message_from_event event_obj
+  user_id = command_hash[:user_id]
+  text_command_args = command_hash[:args].join(' ').downcase.strip
+  #Debug.inspect command_hash
+  #Debug.inspect exercises_hash
+
+  chosen_exercise = @USERS_EXERCISE_HASH[user_id]
+  #Debug.inspect @USERS_EXERCISE_HASH[user_id]
+
+  if chosen_exercise.nil? || chosen_exercise.keys.length < 1
+    event_obj.respond('You have not started on any (new) exercises yet.')
+    return false
+  end
+
+  puts (command_hash[:user_id].to_s) + ' -> ' + chosen_exercise['text_id'] + ' -> '+ text_command_args if @DEBUG
+
+  is_correct_answer = false
+  chosen_exercise['correct'].each do |correct|
+    #puts correct.inspect
+    if text_command_args == correct
+      is_correct_answer = true
+      break
+    end
+  end
+
+  if command_hash[:server_id] == @GLOBAL_SETTINGS_HASH[:bot_runs_on_server_id]
+    event_obj.channel.send_temporary_message('<@'+(command_hash[:user_id].to_s)+'>, please check your private messages.', 10)
+  end
+
+  if is_correct_answer
+    event_obj.author.pm('`' + text_command_args + '` is **correct**! Well done. :relieved:')
+    @USERS_EXERCISE_HASH[user_id] = {}
+  else
+    answer_text = '`' + text_command_args + '` is unfortunately **wrong**. :confused:'
+    chosen_exercise['wrong'].each do |wrong|
+      #puts wrong.inspect
+      if text_command_args == wrong['word'] && wrong['reason']
+        answer_text += 'In this context `' + wrong['word'] + '` would mean ' + wrong['reason'] + '.'
+      end
+    end
+    event_obj.author.pm(answer_text)
+  end
 end
 
 
@@ -1269,72 +1534,77 @@ end
 # Thank you @High Tide ;-)
 # @param [EventObject]
 # @return [true,false]
-def check_if_user_spam_commands event_obj, command, needed_time_since_last_command = 1
+def check_if_user_spam_commands event_obj, command = Time.now.to_s, needed_time_since_last_similar_command = @GLOBAL_SETTINGS_HASH[:user_bot_invokes_minimum_time_frame_limit]
   Debug.trace if @DEBUG
   returnval = true
   is_spamming = false
 
   user_hash = get_user_from_event event_obj
   user_id = user_hash[:id]
+  #puts user_hash.inspect if @DEBUG
   
   remember_me = { cmd: command, time: Time.now }
-  timediff_since_last_command = @BOT_INVOKES_TIME_FRAME_LIMIT + 1
-
-  #puts @USER_BOT_INVOKES.inspect if @DEBUG && @DEBUG_SPAMMY
+  timediff_since_last_similar_command = timediff_since_last_command = @GLOBAL_SETTINGS_HASH[:bot_invokes_time_frame_period] + 1
   
-  if @USER_BOT_INVOKES.has_key? user_id
-    if @USER_BOT_INVOKES[user_id].length > 0
-      timediff_since_last_command = Time.now - @USER_BOT_INVOKES[user_id][-1][:time]
+  #Debug.inspect @USERS_BOT_INVOKES if @DEBUG
+  
+  if @USERS_BOT_INVOKES.has_key? user_id
+    if @USERS_BOT_INVOKES[user_id].length > 0
+      timediff_since_last_command = Time.now - @USERS_BOT_INVOKES[user_id][-1][:time]
     end
 
     # Check the time since any similar command.
-    (0..@USER_BOT_INVOKES[user_id].length-1).each do |i_counter|
-      #puts "før: #{timediff_since_last_command}" if @DEBUG && @DEBUG_SPAMMY
-      #puts "#{i_counter}: #{@USER_BOT_INVOKES[user_id][i_counter][:cmd]} ==? #{command}" if @DEBUG && @DEBUG_SPAMMY
+    (0..@USERS_BOT_INVOKES[user_id].length-1).each do |i_counter|
+      #puts "før: #{timediff_since_last_similar_command}" if @DEBUG && @DEBUG_SPAMMY
+      #puts "#{i_counter}: #{@USERS_BOT_INVOKES[user_id][i_counter][:cmd]} ==? #{command}" if @DEBUG && @DEBUG_SPAMMY
       # If the command used matches a command previously used, recalculate the time difference.
-      if @USER_BOT_INVOKES[user_id][i_counter][:cmd] == command
-        timediff_since_last_command = Time.now - @USER_BOT_INVOKES[user_id][i_counter][:time]
+      if @USERS_BOT_INVOKES[user_id][i_counter][:cmd] == command
+        timediff_since_last_similar_command = Time.now - @USERS_BOT_INVOKES[user_id][i_counter][:time]
       end
-      #puts "ett: #{timediff_since_last_command}" if @DEBUG && @DEBUG_SPAMMY
-    end
+      #puts "ett: #{timediff_since_last_similar_command}" if @DEBUG && @DEBUG_SPAMMY
+    end #loop
 
     # Add the latest user command to the array.
-    @USER_BOT_INVOKES[user_id].push( remember_me )
+    @USERS_BOT_INVOKES[user_id].push( remember_me )
 
     # Loop over all of the user commands and see if of them are old and should be removed.
-    (0..@USER_BOT_INVOKES[user_id].length-1).each do |i_counter|
+    (0..@USERS_BOT_INVOKES[user_id].length-1).each do |i_counter|
       #puts i_counter if @DEBUG && @DEBUG_SPAMMY
-      #puts @USER_BOT_INVOKES[user_id].inspect if @DEBUG && @DEBUG_SPAMMY
+      #puts @USERS_BOT_INVOKES[user_id].inspect if @DEBUG && @DEBUG_SPAMMY
 
-      if i_counter > @USER_BOT_INVOKES[user_id].length-1
+      if i_counter > @USERS_BOT_INVOKES[user_id].length-1
         break
       end
-      timediff = Time.now - @USER_BOT_INVOKES[user_id][i_counter][:time]
+      timediff = Time.now - @USERS_BOT_INVOKES[user_id][i_counter][:time]
 
-      if timediff > @BOT_INVOKES_TIME_FRAME_LIMIT
-        @USER_BOT_INVOKES[user_id].shift
+      if timediff > @GLOBAL_SETTINGS_HASH[:bot_invokes_time_frame_period]
+        @USERS_BOT_INVOKES[user_id].shift
         # Redo the loop from the current index.
         redo
       end
     end #loop
 
-    user_invokes = @USER_BOT_INVOKES[user_id]
+    user_invokes = @USERS_BOT_INVOKES[user_id]
     #puts user_invokes.length if @DEBUG
+    max_user_invokes = @GLOBAL_SETTINGS_HASH[:user_max_bot_invokes_per_time_limit]
 
     # Give the user a warning before they are over the edge.
     # Timeout is in seconds.
-    if user_invokes.length > (@USER_MAX_BOT_INVOKES_PER_TIME_LIMIT + 1)
+    if user_invokes.length > (max_user_invokes + 1)
       returnval = false
-    elsif user_invokes.length > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
-      event_obj.channel.send_temporary_message( user_hash[:mention] + ', you are now **ignored**. Ask the other people here what works.', 5*@BOT_INVOKES_TIME_FRAME_LIMIT)
+    elsif user_invokes.length > max_user_invokes
+      event_obj.channel.send_temporary_message(user_hash[:mention] + ', you are now **ignored**. Ask the other people here what works.',
+        5 * @GLOBAL_SETTINGS_HASH[:bot_invokes_time_frame_period])
       returnval = false
-    elsif (user_invokes.length + 1) > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
-      event_obj.channel.send_temporary_message( user_hash[:mention] + ', you **really** need to **calm down**! Try `!help` to see valid commands. Or ask someone else here.', 5*@BOT_INVOKES_TIME_FRAME_LIMIT)
+    elsif (user_invokes.length + 1) > max_user_invokes
+      event_obj.channel.send_temporary_message(user_hash[:mention] + ', you **really** need to **calm down**! '+
+        'Try `!help` to see valid commands. Or ask someone else here.',
+        5 * @GLOBAL_SETTINGS_HASH[:bot_invokes_time_frame_period])
       returnval = true
-    #elsif (user_invokes.length + 2) > @USER_MAX_BOT_INVOKES_PER_TIME_LIMIT
+    #elsif (user_invokes.length + 2) > max_user_invokes
     #  returnval = true
     else
-      if timediff_since_last_command < needed_time_since_last_command
+      if timediff_since_last_command < @GLOBAL_SETTINGS_HASH[:user_bot_invokes_minimum_time_frame_limit] || timediff_since_last_similar_command < needed_time_since_last_similar_command
         event_obj.channel.send_temporary_message('**Ignored**. ' + user_hash[:mention] + ', you should **calm down**.', 5)
         returnval = false
       else
@@ -1343,7 +1613,7 @@ def check_if_user_spam_commands event_obj, command, needed_time_since_last_comma
     end
 
   else
-    @USER_BOT_INVOKES[user_id] = [ remember_me ]
+    @USERS_BOT_INVOKES[user_id] = [ remember_me ]
   end
 
   return returnval
@@ -1361,7 +1631,7 @@ def member_join event_obj
   server_hash = get_server_from_event event_obj
 
   @BOT_OBJ.send_message(server_hash[:default_channel_id],
-    'Hei ' + user_hash[:mention] + ' (id: *'+ user_hash[:id] +'*) og velkommen til **' + server_hash[:servername] + '**!' +"\n"+
+    'Hei ' + user_hash[:mention] + ' (id: *'+ (user_hash[:id].to_s) +'*) og velkommen til **' + server_hash[:servername] + '**!' +"\n"+
     'Feel free to assign yourself an applicable role by typing `!beginner`, `!intermediate`, or `!native`.' +"\n"+
     'We hope you enjoy your stay.')
 
@@ -1381,7 +1651,7 @@ def member_leave event_obj
 
   @BOT_OBJ.send_message(server_hash[:default_channel_id],
     '**' + user_hash[:nick] + '** forlot nettopp serveren. Adjø og ha det bra, **' + user_hash[:nick] + '**!' +"\n"+
-    '(Id: *' + user_hash[:id] + '*)')
+    '(Id: *' + (user_hash[:id].to_s) + '*)')
 
   return true
 end
@@ -1396,12 +1666,12 @@ def output_server_and_channel_info event_obj
 
   Debug.divider
   server_obj = event_obj.server
-  puts server_obj.inspect
-  puts "serverid: #{server_obj.id}"
+  Debug.inspect server_obj
+  puts 'serverid: ' + (server_obj.nil? ? 'nil' : server_obj.id.to_s)
 
   channel_obj = event_obj.channel
-  puts channel_obj.inspect
-  puts "channelid: #{channel_obj.id}"
+  Debug.inspect channel_obj
+  puts 'channelid: ' + (channel_obj.nil? ? 'nil' : channel_obj.id.to_s)
 
   return true
 end
@@ -1411,86 +1681,216 @@ end
 # Show the help text.
 # @param [EventObject]
 # @return [true]
-def show_help_text event_obj
+def show_help_text event_obj, command
   Debug.trace if @DEBUG
 
-  server_hash = get_server_from_event event_obj
-  
-  event_obj.respond 'Created by **Noko** for the **' + server_hash[:servername] + '** server, with inspiration from **Yoshi**.' +"\n"+
-    'Source code for the bot can be found at:' +"\n"+
-    '  https://github.com/Brukarnamn/Bifrost' +"\n"+
-    @BOT_COMMANDS_LIST+
-    'In loving memory of **Askeladden** (2016-2017). Hvil i fred. :sob:'
+  puts command.inspect if @DEBUG
+  bot_text_contents = @GLOBAL_SETTINGS_HASH[:bot_texts]
+
+  case command
+  when 'HJELP'
+    create_and_send_discord_embed event_obj, bot_text_contents['hjelp'] if bot_text_contents['hjelp']
+  when 'HJELP_ROLLER'
+    create_and_send_discord_embed event_obj, bot_text_contents['hjelp_roller'] if bot_text_contents['hjelp_roller']
+  when 'HJELP_OSS'
+    create_and_send_discord_embed event_obj, bot_text_contents['hjelp_oss'] if bot_text_contents['hjelp_oss']
+  when 'HJELP_ANNET'
+    create_and_send_discord_embed event_obj, bot_text_contents['hjelp_annet'] if bot_text_contents['hjelp_annet']
+  else
+    event_obj.respond 'Help text is missing. Please contact a moderator to get this fixed.'
+  end
 
   return true
 end  
 
 
 
-# Show the help text.
+# Show a faq text.
 # @param [EventObject]
 # @return [true]
-def show_expanded_help_text event_obj
+def show_faq_text event_obj, command
   Debug.trace if @DEBUG
-
-  server_hash = get_server_from_event event_obj
   
-  event_obj.respond 'Created by **Noko** for the **' + server_hash[:servername] + '** server, with inspiration from **Yoshi**.' +"\n"+
-    'Source code for the bot can be found at:' +"\n"+
-    '  https://github.com/Brukarnamn/Bifrost' +"\n"+
-    @BOT_COMMANDS_LIST+
-    'In loving memory of **Askeladden** (2016-2017). Hvil i fred. :sob:'
-
+  puts command.inspect if @DEBUG
+  bot_text_contents = @GLOBAL_SETTINGS_HASH[:bot_texts]
+  
+  create_and_send_discord_embed event_obj, bot_text_contents[command] if bot_text_contents[command]
+  
   return true
-end  
+end
 
 
 
-# Check what the user typed as a simple one-word command and do appropriately.
-# These are one-word commands that do not parse any arguments.
+# Handle commands that the bot should respond to in both private messages
+# and if written on the server.
+# Returns true if the command was handled.
+# Returns false otherwise.
+# @param [EventObject]
+# @param [is_private_message]
+# @param [text_command]
+# @param [text_command_args]
+# @return [true,false]
+def handle_server_or_private_messages event_obj, is_private_message, text_command, text_command_args
+  Debug.trace if @DEBUG
+  returnval = true
+  
+  # If private messages then you are only spamming yourself.
+  # If used on the server channel then limit how often you can do them.
+
+  # Remove the first character if it is a private message.
+  if is_private_message && text_command[0] == @GLOBAL_SETTINGS_HASH[:bot_invoke_character]
+    #text_command = text_command[1..-1]
+  end
+
+  begin
+    case text_command
+    # Help texts.
+    when /^HJ?ELP$/
+      case text_command_args.upcase
+      when /^ROLES?$/, 'ROLLER'
+        is_private_message ? show_help_text(event_obj, 'HJELP_ROLLER') :
+                          ( show_help_text(event_obj, 'HJELP_ROLLER') if check_if_user_spam_commands(event_obj, 'HJELP_ROLLER', 60) )
+      when /^FAQS?$/, 'OSS', 'OBS'
+        is_private_message ? show_help_text(event_obj, 'HJELP_OSS') :
+                          ( show_help_text(event_obj, 'HJELP_OSS') if check_if_user_spam_commands(event_obj, 'HJELP_OSS', 60) )
+      when /^OTHERS?$/, 'ANNET'
+        is_private_message ? show_help_text(event_obj, 'HJELP_ANNET') :
+                          ( show_help_text(event_obj, 'HJELP_ANNET') if check_if_user_spam_commands(event_obj, 'HJELP_ANNET', 60) )
+      else
+        is_private_message ? show_help_text(event_obj, 'HJELP') :
+                          ( show_help_text(event_obj, 'HJELP') if check_if_user_spam_commands(event_obj, 'HJELP', 60) )
+      end
+
+    when /^HJ?ELP/
+      case text_command
+      when /^HELP[\-_]?ROLES$/, /^HJELP[\-_]?ROLLER$/
+        is_private_message ? show_help_text(event_obj, 'HJELP_ROLLER') :
+                          ( show_help_text(event_obj, 'HJELP_ROLLER') if check_if_user_spam_commands(event_obj, 'HJELP_ROLLER', 60) )
+      when /^HELP[\-_]?FAQ$/, /^HJELP[\-_]?(OSS|OBS)$/
+        is_private_message ? show_help_text(event_obj, 'HJELP_OSS') :
+                          ( show_help_text(event_obj, 'HJELP_OSS') if check_if_user_spam_commands(event_obj, 'HJELP_OSS', 60) )
+      when /^HELP[\-_]?OTHERS?$/, /^HJELP[\-_]?ANNET$/
+        is_private_message ? show_help_text(event_obj, 'HJELP_ANNET') :
+                          ( show_help_text(event_obj, 'HJELP_ANNET') if check_if_user_spam_commands(event_obj, 'HJELP_ANNET', 60) )
+      else
+        is_private_message ? show_help_text(event_obj, 'HJELP') :
+                          ( show_help_text(event_obj, 'HJELP') if check_if_user_spam_commands(event_obj, 'HJELP', 60) )
+      end
+
+    # Faq texts.
+    when 'FAQ', 'OSS', 'OBS'
+      faq_text = text_command_args.downcase
+      if @GLOBAL_SETTINGS_HASH[:bot_texts]['oss_'+faq_text]
+        is_private_message ? show_faq_text(event_obj, 'oss_'+faq_text) :
+                          ( show_faq_text(event_obj, 'oss_'+faq_text) if check_if_user_spam_commands(event_obj, 'FAQ_'+text_command_args.upcase, 60) )
+      else
+        is_private_message ? show_help_text(event_obj, 'HJELP_OSS') :
+                          ( show_help_text(event_obj, 'HJELP_OSS') if check_if_user_spam_commands(event_obj, 'HJELP_OSS', 60) )
+      end
+
+    when /^OPP(GAVE)?$/, 'ØVELSE', 'TEST', 'PRACTICE', 'PRACTISE', 'EXERCISE'
+      choose_norwegian_exercise event_obj
+
+    when 'VIS', 'SHOW'
+      show_norwegian_exercise event_obj
+
+    when 'SVAR', 'ANSWER'
+      user_response_to_norwegian_exercise event_obj, text_command_args
+      
+    # Ping. Pong.
+    when 'PING'
+      # Shows -1.8 or whatever if the PC-clock is out of sync with Discord's clock.
+      # Wait 60 seconds before removing the message.
+      user_hash = get_user_from_event event_obj
+      if check_if_user_spam_commands(event_obj, text_command, 5)
+        if is_private_message
+          event_obj.channel.send_message('Pong ' + user_hash[:mention] + '! (Id = ' + (user_hash[:id].to_s) + ')')
+        else
+          event_obj.channel.send_temporary_message('Pong ' + user_hash[:mention] + '! (Id = ' + (user_hash[:id].to_s) + ')', 60)
+        end
+      end
+
+    when 'CHANNELINFO'
+      if check_if_user_spam_commands(event_obj, text_command) && text_command_args == @GLOBAL_SETTINGS_HASH[:bot_system_code]
+        output_server_and_channel_info(event_obj)
+      end
+
+    else
+      puts '`' + text_command + '` not caught by handle_server_and_private_messages()' if @DEBUG
+      returnval = false
+    end
+  rescue Discordrb::Errors::NoPermission => e
+    puts 'Discordrb::Errors::NoPermission'
+    puts e.inspect
+  ensure
+    # This will always be done.
+  end
+
+  return returnval
+end
+
+
+
+# Check what the user typed as a bot command and do appropriately.
 # @param [EventObject]
 # @return [true,false]
-def handle_simple_messages event_obj
+def handle_complex_messages event_obj
   Debug.trace if @DEBUG
-
+  
   command_hash = get_message_from_event event_obj
   user_hash = get_user_from_event event_obj
-  #channel_hash = get_channel_from_event event_obj
+  #Debug.inspect command_hash if @DEBUG
+  Debug.inspect user_hash if @DEBUG
 
+  is_private_message = (command_hash[:server_id] == @GLOBAL_SETTINGS_HASH[:bot_runs_on_server_id] ? false : true)
   text_command = command_hash[:text]
+  text_command_args = command_hash[:args].join(' ')
 
-  ## Spam control
-  #if check_if_user_spam_commands(event_obj, text_command)
-  #else
-  #  # Too spammy.
-  #  return false
-  #end
-  
+  return if handle_server_or_private_messages event_obj, is_private_message, text_command, text_command_args
+  return if is_private_message
+  users_role_commands = @GLOBAL_SETTINGS_HASH[:uc_user_role_commands]
+
   case text_command
-  when 'PING'
-    # Shows -1.8 or whatever because the PC-clock is out of sync with Discord's clock.
-    #event_obj.respond 'Pong ' + user_hash[:mention] + '! ' + (Time.now - event_obj.timestamp).to_s + ' (Id = ' + user_hash[:id] + ')'
-    # Wait 60 seconds before removing the message.
-    event_obj.channel.send_temporary_message('Pong ' + user_hash[:mention] + '! (Id = ' + user_hash[:id] + ')', 60) if check_if_user_spam_commands(event_obj, text_command, 5)
-  when 'HELP', 'HJELP'
-    show_help_text(event_obj) if check_if_user_spam_commands(event_obj, text_command, 60)
   when 'BEGINNER', 'INTERMEDIATE'
-    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, text_command)
+    change_role_permission_on_user(event_obj, users_role_commands[text_command], true) if check_if_user_spam_commands(event_obj, text_command)
   when 'ADVANCED'
     event_obj.respond('Dette nivået må du spørre en moderator om, ' + user_hash[:mention]) if check_if_user_spam_commands(event_obj, text_command)
   when 'NATIVE', 'NORSK'
-    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'NORSK')
+    change_role_permission_on_user(event_obj, users_role_commands[text_command], true) if check_if_user_spam_commands(event_obj, 'NORSK')
   when 'SVENSK'
-    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'SVENSK')
+    change_role_permission_on_user(event_obj, users_role_commands[text_command], true) if check_if_user_spam_commands(event_obj, 'SVENSK')
   when 'DANSK', 'DANSKER'
-    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command], true) if check_if_user_spam_commands(event_obj, 'DANSK')
+    change_role_permission_on_user(event_obj, users_role_commands[text_command], true) if check_if_user_spam_commands(event_obj, 'DANSK')
   when 'NSFW', 'COMP'
-    #change_simple_permission_on_user event_obj, @USER_ROLE_COMMANDS[text_command]
-    change_role_permission_on_user(event_obj, @USER_ROLE_COMMANDS[text_command]) if check_if_user_spam_commands(event_obj, text_command)
-  when 'CHANNELINFO'
-    output_server_and_channel_info(event_obj) if check_if_user_spam_commands(event_obj, text_command)
-  when 'SAVE_LOOKUP_TABLE'
-    save_ordbok_dictionary_word_responses_lookup_table if check_if_user_spam_commands(event_obj, text_command, 60)
+    change_role_permission_on_user(event_obj, users_role_commands[text_command]) if check_if_user_spam_commands(event_obj, text_command)
+  when 'NB', 'BM', /^BOKM(Å|AA|A)L$/
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, text_command_args, true, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
+  when /^(NB|BM)[KS]$/, /^BOKM(Å|AA|A)L[\-_]?(KORT|SHORT)$/
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, text_command_args, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
+  when 'NN', 'NYNORSK'
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, text_command_args, false, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
+  when /^(NN)[KS]$/, /^NYNORSK[\-_]?(KORT|SHORT)$/
+    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, text_command_args, false) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
+  when 'RELOADTEXT'
+    if check_if_user_spam_commands(event_obj, 'RELOAD_TEXT_CONTENTS_FILE', 10) && text_command_args == @GLOBAL_SETTINGS_HASH[:bot_system_code]
+      success_status = reload_text_contents_file_and_merge @GLOBAL_SETTINGS_HASH[:bot_texts_file], :bot_texts
+      if success_status[:status]
+        event_obj.channel.send_temporary_message('Done.', 60) 
+      else
+        event_obj.channel.send_temporary_message(success_status[:error], 60)
+      end
+    end
+  when 'SAVEDICTIONARYLOOKUPTABLE'
+    if check_if_user_spam_commands(event_obj, 'SAVE_DICTIONARY_LOOKUP_TABLE', 10) && text_command_args == @GLOBAL_SETTINGS_HASH[:bot_system_code]
+      save_ordbok_dictionary_word_responses_lookup_table
+      event_obj.respond('What are you doing, '+user_hash[:mention]+'? :thinking:')
+    end
+  when 'DEBUGSETTINGS'
+    if check_if_user_spam_commands(event_obj, 'DEBUG_SETTINGS', 10) && text_command_args == @GLOBAL_SETTINGS_HASH[:bot_system_code]
+      Debug.divider
+      Debug.inspect @GLOBAL_SETTINGS_HASH
+      event_obj.respond('What are you doing, '+user_hash[:mention]+'? :thinking:')
+    end
   else
     puts 'Unknown command: ' + command_hash[:orig_text]
   end
@@ -1500,33 +1900,25 @@ end
 
 
 
-def handle_complex_messages event_obj
+def handle_complex_private_messages event_obj
   Debug.trace if @DEBUG
-  
+
   command_hash = get_message_from_event event_obj
   user_hash = get_user_from_event event_obj
-  #channel_hash = get_channel_from_event event_obj
+  #Debug.inspect command_hash if @DEBUG
+  Debug.inspect user_hash if @DEBUG
 
+  is_private_message = (command_hash[:server_id] == @GLOBAL_SETTINGS_HASH[:bot_runs_on_server_id] ? false : true)
   text_command = command_hash[:text]
+  text_command_args = command_hash[:args].join(' ')
 
-  ## Spam control
-  #if check_if_user_spam_commands event_obj, text_command
-  #else
-  #  # Too spammy.
-  #  return false
-  #end
+  return if handle_server_or_private_messages event_obj, is_private_message, text_command, command_hash[:args].join(' ')
 
   case text_command
-  when 'NB', 'BM', 'BOKMÅL', 'BOKMAL', 'BOKMAAL'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
-  when 'NBK', 'BMK', 'BOKMÅL-KORT', 'BOKMAL-KORT', 'BOKMAAL_KORT', 'BOKMÅL_KORT', 'BOKMAL_KORT', 'BOKMAAL_KORT', 'BOKMÅLKORT', 'BOKMALKORT', 'BOKMAALKORT'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
-  when 'NN', 'NYNORSK'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false, true) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
-  when 'NNK', 'NYNORSK-KORT', 'NYNORSK_KORT', 'NYNORSKKORT'
-    ordbok_uib_no_dictionary_lookup_wrapper(event_obj, command_hash[:args].join(' '), false) if check_if_user_spam_commands(event_obj, 'ORDBOK', 5)
+  when 'HEI'
+    event_obj.respond('Hei på deg.')
   else
-    puts 'Unknown command: ' + command_hash[:orig_text]
+    event_obj.respond('Unknown command.')
   end
 
   return true
@@ -1539,7 +1931,7 @@ end
 # @return [Discordrb::Bot]
 def init_bot
   Debug.trace if @DEBUG
-  @BOT_OBJ = Discordrb::Bot.new token: @BOT_SETTINGS_HASH['token'], client_id: @BOT_SETTINGS_HASH['client_id']
+  @BOT_OBJ = Discordrb::Bot.new token: @GLOBAL_SETTINGS_HASH[:token], client_id: @GLOBAL_SETTINGS_HASH[:client_id]
 
   raise 'Unable to start the bot!' if @BOT_OBJ.nil?
 
@@ -1551,14 +1943,34 @@ def init_bot
     member_leave event_obj
   end
 
-  bot_command_regexp_roles = (@BOT_INVOKE_CHARACTER+'[a-zA-Z\-_]+').freeze
-  @BOT_OBJ.message(exact_text: %r{^#{bot_command_regexp_roles}$}) do |event_obj|
-    handle_simple_messages event_obj
+  @BOT_OBJ.ready do |event_obj|
+    puts 'Connected...?'
+    ready_bot event_obj
   end
 
-  bot_command_regexp_dictionary_lookup = (@BOT_INVOKE_CHARACTER+'[a-zA-ZæøåÆØÅ\-_]+(\s+\S+)+').freeze
-  @BOT_OBJ.message(exact_text: %r{^#{bot_command_regexp_dictionary_lookup}$}) do |event_obj|
+  @BOT_OBJ.disconnected do |event_obj|
+    puts 'Disconneted...?'
+    #save_ordbok_dictionary_word_responses_lookup_table
+  end
+
+  @BOT_OBJ.heartbeat do |event_obj|
+    admin_system_code = generate_new_system_code
+    Debug.inspect admin_system_code, 0, true, 'Heartbeat... '
+  end
+
+  bot_invoke_character = @GLOBAL_SETTINGS_HASH[:bot_invoke_character]
+  valid_bot_command_characters = '[a-zA-ZæøåÆØÅ\-_]+'
+
+  bot_command_regexp_multi_word = (bot_invoke_character + valid_bot_command_characters + '(\s+\S+)*').freeze
+  @BOT_OBJ.message(exact_text: %r{^#{bot_command_regexp_multi_word}$}) do |event_obj|
     handle_complex_messages event_obj
+  end
+
+  # A message event also triggers a private message event. But might be stopped depending on the string/regexp to respond on.
+  #private_bot_command_regexp_multi_word = (bot_invoke_character+'?' + valid_bot_command_characters + '(\s+\S+)*').freeze
+  private_bot_command_regexp_multi_word = (valid_bot_command_characters + '(\s+\S+)*').freeze
+  @BOT_OBJ.private_message(exact_text: %r{^#{private_bot_command_regexp_multi_word}$}) do |event_obj|
+    handle_complex_private_messages event_obj
   end
     
   return @BOT_OBJ
@@ -1566,23 +1978,131 @@ end
 
 
 
+def ready_bot event_obj
+  Debug.trace if @DEBUG
+
+  @BOT_OBJ.game = 'Heimdall\'s Bridge'
+
+  return true
+end
+
+
+
 # "Main" part of the program.
 # With its own little variable scope.
-def main
+def main command_line_arguments
   Debug.trace if @DEBUG
-  load_settings
+
+  load_settings command_line_arguments
 
   @BOT_OBJ = init_bot
   @BOT_OBJ.run
+
+  return true
 end
 
 
 
 # Call the main function.
-main
+main ARGV
+
 
 
 #end
 
 
 
+=begin
+_example_on_how_the_global_settings_variable_could_look_like_ = 
+{
+  :client_id => "361603350975741952",
+  :client_secret => "ejfCgfcK5TN6pXs1BgjfNTIlaiUEdTrq",
+  :token => "MzYxNjAzMzUwOTc1NzQxOTUy.DK5egA.W6_YKiC4ld-uaqmxCHwo4f_AGbk",
+  :test_server => 348172070947127306,
+  :live_server => 202189706383982605,
+  :bot_runs_on_server_id => 348172070947127306,
+  :default_channel_id => 348172071412563971,
+  :role_spam_channel_id => 348172071412563971,
+  :exercises_channel_id => 363718468421419008,
+  :bot_invoke_character => "!",
+  :bot_texts_file => "./bot_texts.json",
+  :bot_texts => {
+    "hjelp": {
+    },
+    "hjelp-roller": {
+    },
+    "hjelp-annet": {
+    },
+    "hjelp-oss": {
+    },
+    "oss-roles": {
+    },
+    "øvelser": {
+      "preposisjoner": [
+        {
+          "sentence": "De bor ___ en leilighet.",
+          "meaning": "They live in an apartment.",
+          "correct": [ "i" ],
+          "wrong": [  ]
+        },
+        {
+          "sentence": "Hvilken farge er det ___ huset?",
+          "meaning": "Which colour is (it on) the house.",
+          "correct": [ "på" ],
+          "wrong": [  ]
+        },
+        {  }
+      ]
+    }
+  },
+  :bot_text_embed_color => "0x490506",
+  :user_max_bot_invokes_per_time_limit => 5,
+  :user_bot_invokes_minimum_time_frame_limit => 1,
+  :bot_invokes_time_frame_period => 60,
+  :wkhtmltoimage_exe_path => "c:/bin/wkhtmltopdf/bin/wkhtmltoimage.exe",
+  :ordbok_dictionary_css_file_path => "./ordbok_uib_no.css",
+  :ordbok_dictionary_css => "...",
+  :word_inflection_image_path => "d:/bifrost-discordbot",
+  :roles => {
+    "beginner": "beginner",
+    "intermediate": "intermediate",
+    "advanced": "advanced",
+    "nsfw": "nsfw",
+    "comp": "computer wannabe",
+    "native": "norwegian native speaker",
+    "norsk": "norwegian native speaker",
+    "svensk": "swedish native speaker",
+    "dansk": "danish native speaker",
+    "dansker": "danish native speaker"
+  },
+  :exclusive_roles => [
+    "beginner",
+    "intermediate",
+    "advanced",
+    "norwegian native speaker",
+    "swedish native speaker",
+    "danish native speaker"
+  ],
+  :uc_user_role_commands => {
+    "BEGINNER": "BEGINNER",
+    "INTERMEDIATE": "INTERMEDIATE",
+    "ADVANCED": "ADVANCED",
+    "NSFW": "NSFW",
+    "COMP": "COMPUTER WANNABE",
+    "NATIVE": "NORWEGIAN NATIVE SPEAKER",
+    "NORSK": "NORWEGIAN NATIVE SPEAKER",
+    "SVENSK": "SWEDISH NATIVE SPEAKER",
+    "DANSK": "DANISH NATIVE SPEAKER",
+    "DANSKER": "DANISH NATIVE SPEAKER"
+  },
+  :uc_user_exclusive_roles => [
+    "BEGINNER",
+    "INTERMEDIATE",
+    "ADVANCED",
+    "NORWEGIAN NATIVE SPEAKER",
+    "SWEDISH NATIVE SPEAKER",
+    "DANISH NATIVE SPEAKER"
+  ]
+}
+Debug.inspect _example_on_how_the_global_settings_variable_could_look_like_
+=end
