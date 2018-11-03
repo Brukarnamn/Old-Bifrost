@@ -1,0 +1,131 @@
+# http://www.yaml.org/spec/1.2/spec.html
+# https://en.wikipedia.org/wiki/YAML#Design
+#
+# Place the file in the data/bot_texts folder.
+#
+---
+
+hjelp_oss:
+  :mapping:
+    - faq
+    - help faq
+  :title: Bifrost-bot – Frequently asked questions (FAQ)
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - Frequently asked questions.
+    - Type `!faq`, `!oss` or `!obs` and a keyword. For example `!faq roles`
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '**roles**'
+      :value:
+        - Available user roles on this server and what they mean.
+      :inline: false
+#
+
+oss_roles:
+  :mapping: faq roles
+  :title: Bifrost-bot – FAQ Roles
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - The user and permission roles on this server.
+    - See `!help roles` to see which roles you can set/remove from yourself.
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '**Beginner**'
+      :value:
+        - Role for members who have just started learning Norwegian or haven't acquired the basics just yet. It also gives access to a few other channels.
+        - CEFR level A1-A2.
+      :inline: false
+    # Another part.
+    - :name: '**Intermediate**'
+      :value:
+        - Role for members who know basic Norwegian, but still lack vocabulary compared to "advanced" and not able to perform structures with more complicated grammar.
+        - CEFR level B1-B2.
+      :inline: false
+    # Another part
+    # https://cefr.folkeuniversitetet.no/
+    - :name: '**Advanced**'
+      :value:
+        - Role for members who are fluent in Norwegian. Currently you need to ask a moderator for this role.
+        - CEFR level C1-C2.
+      :inline: false
+    # Another part
+    - :name: '**Native**'
+      :value:
+        - Role for native Norwegian speakers.
+        - These should have the ability to speak and write Norwegian without obvious grammatical or syntactical errors in addition to cultural knowledge of Norwegian society. People should normally be able to trust anything they write and any answers they might give when answering questions.
+        - Please contact the user or a moderator if you feel someone should not have this role.
+      :inline: false
+    # Another part
+    - :name: '**Bokmål**'
+      :value:
+        - Role for members who primarily use *bokmål* when they write Norwegian.
+      :inline: false
+    # Another part
+    - :name: '**Nynorsk**'
+      :value:
+        - Role for members who primarily use *nynorsk* when they write Norwegian.
+      :inline: false
+    # Another part
+    - :name: '**Swedish**'
+      :value:
+        - Role for members who have Swedish as their native spoken language.
+      :inline: false
+    # Another part
+    - :name: '**Danish**'
+      :value:
+        - Role for members who have Danish as their native spoken language.
+      :inline: false
+    # Another part
+    - :name: '**Head moderator**, **moderator**'
+      :value:
+        - Moderators are the people who help you solve problems concerning the server, they remove any threatening or offensive messages and make certain that discussions can flow without serious conflicts and complications.
+      :inline: false
+    # Another part
+    - :name: '**Contributor**'
+      :value:
+        - Contributors are people that have contributed substantially to the server and/or its community.
+      :inline: false
+    # Another part
+    - :name: '**Loffer**'
+      :value:
+        - Role for people that have volunteered to help answer people and create activity in <#283985790290231296>.
+      :inline: false
+    # Another part
+    - :name: '**Comp**'
+      :value:
+        - Role for members who are above average interested in computer stuff.
+      :inline: false
+    # Another part
+    - :name: '**Popcorn**'
+      :value:
+        - Role for members who are interested in notifications when Norwegian (dubbed) films and video clips are being shown.
+      :inline: false
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

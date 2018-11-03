@@ -1,0 +1,380 @@
+# http://www.yaml.org/spec/1.2/spec.html
+# https://en.wikipedia.org/wiki/YAML#Design
+#
+# Place the file in the data folder
+#
+# REMEMBER:
+# If you add or delete a key from this file, remember to update the list of
+# valid keys in the config.rb file.
+#
+---
+################################################################################
+# Bot secret keys/passwords.
+# Will be read from server_secrets.yml
+#
+# DO NOT SHARE THESE. DO NOT CHANGE THESE.
+:client_id: -1
+:client_secret: ''
+:token: ''
+
+################################################################################
+# Database server type and database name.
+:database_engine: 'sqlite'
+:database_file_name: 'data/server_data.sqlite'
+:database_port:      ''
+:database_username:  ''
+:database_password:  ''
+
+################################################################################
+# The server IDs of the live server and the test/dev server.
+:test_server_id: 348172070947127306
+:live_server_id: 202189706383982605
+
+################################################################################
+# Channel IDs of the bot's communication channels.
+# Configured in the server specific section below.
+#
+# Channel, if any, where there are rules or information or whatever about the server.
+:info_channel_id: -1
+
+# Default chat channel for the bot.
+:default_channel_id: -1
+
+# Channel to respond to role modification responses.
+:role_spam_channel_id: -1
+
+# Channel to respond to general spam responses.
+:generic_spam_channel_id: -1
+
+# Channel to display various changes that might or might not be of interest.
+# Intended for information not everybody should see.
+:audit_spam_mod_channel_id: -1
+
+# Channel to display a summary of various changes that might or might not be of interest.
+# Intended for information everybody can see.
+# Should contain less amount of possible sensive data than the full log.
+:audit_spam_public_channel_id: -1
+
+# Channel for exercise responses.
+:exercises_channel_id: -1
+
+# Channels and emojies to automatically respond with on every new message.
+:emoji_react_channels: {}
+
+# The maximum period of time (in seconds) that should be allowed between
+# Discord's audit log time and the current time when the bot tries to match
+# an audit entry with an actual event.
+# Experimentation seems to suggest around 15 minutes = 15 * 60 seconds
+:discord_audit_log_max_time: 900
+
+# Number of last messages that should be shown if a user is banned.
+# Max is 25 or the output will fail due to Discord's limits.
+:user_ban_show_messages_count: 17
+
+################################################################################
+# The bot is running on this server id.
+# Gets changed during start-up.
+:bot_runs_on_server_id: -1
+
+# Date and time the bot got started.
+:bot_startup_time: ''
+
+# If the bot should play a game.
+# This will be shown under the nick in the users listing as
+# Playing ...
+:bot_is_playing_game: ''
+
+# Which magic character is used to invoke the bot commands.
+# A lot of stuff will currently fail if this is more than one single character in length.
+:bot_invoke_character: '!'
+
+# Which characters are allowed in the bot command itself, after the invoke character
+# has been removed, and the string has been split into command and arguments by spaces.
+# This string will be inserted literally into a regex during time of check, so make sure
+# you take into account character repetition.
+# Space divided the command and arguments, so space will never match in this regex.
+# This does not check for the command arguments, which the individual commands
+# themselves would have to check.
+:bot_valid_command_characters: '[a-zA-ZæøåÆØÅ\-_]+'
+
+# The emoji to respond with if it successfully got parsed as a valid command and
+# the command method triggered, independently of this method's result.
+# Shortcodes do not work. You will have to use the unicode character, '🤔' or escape the shortcode \:thinking:
+#:bot_valid_command_emoji: '✔'
+:bot_valid_command_emoji: '☑'
+#:bot_valid_command_emoji: '✅'
+
+# Admin/system code to allow certain commands.
+# Changes with each use and and frequent intervals.
+:bot_system_code: ''
+
+# Colour to use on the left embed edge inside Discord.
+#:bot_text_embed_color: '0xe91e63' # The one seen in the colour picker grid.
+:bot_text_embed_color: '0xe91e57' # Slightly darker due to antialiasing of fonts.
+
+# URL to be used in some bot answers. The URL to the GitHub page.
+:bot_url: 'https://github.com/Brukarnamn/Bifrost'
+
+################################################################################
+# Split out text files for the bot's various text responses.
+#
+# Some because it is just easier that way.
+# Others because the contents are dynamically generated commands on their own.
+#
+# The folder these files are in.
+:bot_command_texts_folder: './data/bot_command_texts/'
+
+# The responses to the various events.
+:bot_event_responses: {}
+
+# The responses to some of the silly commands.
+# The commands will be the key, and the response will be the value.
+:bot_silly_texts: {}
+
+# The responses to FAQs, questions, and so on, are in a folder of their own.
+:bot_texts_folder: './data/bot_texts/'
+:bot_texts: {}
+
+# The inactivity messages, riddles, jokes, etc.
+:bot_inactivity_folder: './data/bot_inactivity_stuff/'
+:bot_inactivity_messages: {}
+
+# The exercises.
+:bot_exercises_folder: './data/bot_exercises/'
+:bot_exercises: {}
+
+# The default time in seconds that any of the silly text responses will stay in chat
+# before they are automatically deleted.
+:bot_silly_command_default_timeout: 120
+
+################################################################################
+# Spam control limits for user commands.
+# At most 5 times every 60 seconds, and with a hard limit of 1 second between each usage.
+:user_max_bot_invokes_per_time_limit: 5
+:user_bot_invokes_minimum_time_frame_limit: 1
+:bot_invokes_time_frame_period: 60
+# Some commands require more processing or web page lookups.
+# At most 3 times every 60 seconds, and with a hard limit of 5 seconds between each usage.
+:user_max_bot_invokes_per_time_limit_complex: 3
+:user_bot_invokes_minimum_time_frame_limit_complex: 5
+:bot_invokes_time_frame_period_complex: 60
+# Exercises.
+# At most 2 times every 5 seconds, and with a hard limit of 1 seconds between each usage.
+:user_max_bot_invokes_per_time_limit_exercise: 2
+:user_bot_invokes_minimum_time_frame_limit_exercise: 1
+:bot_invokes_time_frame_period_exercise: 5
+
+################################################################################
+# Array of regexpes containing Usernames / nicknames that will not be allowed.
+# Be VERY CAREFUL that you don't get false positives.
+#
+:illegal_usernames:
+  - bit.+ly
+  #- bitly.+com  # will be caught be the one above.
+  - discord.+(gg|me)
+  - twitch.+tv
+  - twitter.+com
+  - youtube.+com
+  - youtu.+be
+
+# Type \@role_to_tag to get the id(s). Put it inside <@& id_number > to get the tag.
+# Or type \@user_tag to get a user id. Then put it inside <@ id_number > to get the tag.
+:moderator_ping: ''
+
+# List of one or more user-ids that are considered developers, and can do the
+# maintenance commands.
+:developer_user_ids:
+  - 210866460950659072
+
+# List of one or more role-ids that are considered moderators, and can do the
+# moderator commands.
+:moderator_role_ids: []
+
+# List of zero, one or more role-ids that are considered contributors, and can
+# get access to a few more commands.
+:contributor_role_ids: []
+
+################################################################################
+# To fetch the dictionary pages and make images out of them.
+# File path for the html-to-image application.
+:wkhtmltoimage_exe_path: 'c:/bin/wkhtmltopdf/bin/wkhtmltoimage.exe'
+# And the css-files needed to make it prettier.
+:ordbok_dictionary_css_file_path: './data/ordbok_uib_no/ordbok_uib_no.css'
+# In-memory string of the css.
+:ordbok_dictionary_css: ''
+# Where to store the output file.
+:word_inflection_image_folder: 'z:/'
+
+# Characters you're not allowed to use in a dictionary word lookup.
+# Accept only
+#   space
+#   dot                .
+#   minus              -
+#   unicode letters    \p{L}
+#   unicode diacritics \p{M} and
+#   unicode digits     \p{N}
+:illegal_dictionary_search_characters: '[^ \.\-\p{L}\p{M}]'
+
+# The maximum of number of dictionary results to show.
+# The hard coded Discord limit is 25.
+:max_dictionary_results_to_show: 20
+
+################################################################################
+# For the attempts to generate more activty if nothing is said.
+# The channel-id of the channels that should be checked for activity.
+:server_activity_channels: {}
+
+# How long should it be silence before the bot tries to do something.
+# In seconds.
+#   3600 = 1 hour (60 * 60)
+#:server_inactivity_time: 120
+:server_inactivity_time: 3600
+
+# Only do these checks during this time interval.
+# To avoid it spamming when the server is quiet anyway, and none or few mods around to oversee.
+#
+# These are in the LOCAL TIME for the bot, and needs to be able to be parsed by Time.parse
+# BE CAREFUL in what you put as start and end, as these will be both converted to UTC.
+:server_time_interval_start: '07:30:00' # Will post something at 07.30 if nothing happened the last hour.
+:server_time_interval_end:   '01:00:00' # The bot might post something at 02.00 if the inactivity time is 1 hour.
+
+################################################################################
+# Server specific settings.
+# Overrides any generic ones previously set.
+:user_role_commands: {}
+:user_exclusive_roles: []
+:uc_user_role_commands: {}
+:uc_user_exclusive_roles: []
+
+##################################################################################################
+##################################################################################################
+# Test/dev server
+# https://discord.gg/qTG4GQH
+:348172070947127306:
+  :bot_is_playing_game: "certain people's lack of humour."
+  :info_channel_id: 348172071412563971
+  :default_channel_id: 348172071412563971
+  :role_spam_channel_id: -1
+  :generic_spam_channel_id: 493021578351738881
+  :audit_spam_mod_channel_id: 499293333017853964
+  :audit_spam_public_channel_id: 499293434134396958
+  :exercises_channel_id: 363718468421419008
+  :word_inflection_image_folder: 'c:/Kode/BifrostBot/data/ordbok_uib_no'
+  :moderator_ping: '<@210866460950659072>'
+  :moderator_role_ids:
+    - 348172825884098561 # Eier
+    - 497818068001751051 # KAFFE
+  :contributor_role_ids: 497822048031342592
+
+  # WARNING / BUG:
+  # This will fail if you have two roles with the exact same spelling!
+  # Until the code is changed to use unique role-id.
+  :user_role_commands:
+    beginner:     'beginner'
+    intermediate: 'intermediate'
+    advanced:     'advanced'
+    native:       'norwegian native speaker'
+    norsk:        'norwegian native speaker'
+    svensk:       'swedish native speaker'
+    dansk:        'danish native speaker'
+    dansker:      'danish native speaker'
+    nynorsk:      'nynorsk'
+    bokmål:       'bokmål'
+    bokmal:       'bokmål'
+    bokmaal:      'bokmål'
+    nsfw:         'nsfw'
+    comp:         'computer wannabe'
+    rosa:         'rosa'
+    hack:         'superhemmelig hacker-rolle'
+    popcorn:      'superhemmelig hacker-rolle for å bli servereier'
+    kaffe:        'kaffe'
+    te:           'te'
+  :user_exclusive_roles:
+    - - 'beginner'
+      - 'intermediate'
+      - 'advanced'
+      - 'norwegian native speaker'
+      - 'swedish native speaker'
+      - 'danish native speaker'
+    - - 'nynorsk'
+      - 'bokmål'
+      #- 'swedish native speaker' # Maybe a bit too strict.
+      #- 'danish native speaker'  # Maybe a bit too strict.
+  # Shortcodes do not work. You will have to use the unicode character, '🤔' or escape the shortcode \:thinking:
+  :emoji_react_channels:
+    493021578351738881:
+      - ⬆
+      - ⬇
+      - ↕
+  # Which channels to check for activity.
+  :server_activity_channels:
+    505477824749109249: lettloff #(text) → tilfeldig-1
+    505477862577668118: lettloff #(text) → tilfeldig-2
+    505477895330988032: lofferundt #(text) → tilfeldig-3
+    505478089627795477: generelt #(text) → testsetest-privat
+
+##################################################################################################
+##################################################################################################
+# Live server
+:202189706383982605:
+  #:bot_is_playing_game: "certain people's lack of humour."
+  :bot_is_playing_game: "Heimdall's bridge"
+  #:bot_is_playing_game: Cecilie
+  :info_channel_id: 410932875979128842 #→ welcome
+  :default_channel_id: 202189706383982605 #→ conversation
+  :role_spam_channel_id: -1
+  :generic_spam_channel_id: -1
+  :audit_spam_mod_channel_id: 494295091419283497 #→ bot_log_moderator_only
+  :audit_spam_public_channel_id: 508007942650593320 #→ bot_log
+  :exercises_channel_id: -1
+  :word_inflection_image_folder: 'c:/BifrostBot/data/ordbok_uib_no'
+  :moderator_ping: '<@493483280897933315>'
+  :moderator_role_ids:
+    - 493480707457286145 #→ Administrator → mentionable
+    - 493483280897933315 #→ Moderator → mentionable
+    - 493515246087176193 #→ Mod-Trial → mentionable
+  :contributor_role_ids: 303241177606651905 #→ Contributor → hoisted, mentionable
+
+  # WARNING / BUG:
+  # This will fail if you have two roles with the exact same spelling!
+  # Until the code is changed to use unique role-id.
+  :user_role_commands:
+    beginner:     'beginner'
+    intermediate: 'intermediate'
+    #advanced:    'advanced'
+    native:       'norwegian native speaker'
+    norsk:        'norwegian native speaker'
+    #svensk:      'swedish native speaker'
+    #dansk:       'danish native speaker'
+    #dansker:     'danish native speaker'
+    nynorsk:      'nynorsk'
+    bokmål:       'bokmål'
+    bokmal:       'bokmål'
+    bokmaal:      'bokmål'
+    #nsfw:        'nsfw'
+    comp:         'computer wannabe'
+    popcorn:      'popcorntime 🍿'
+  :user_exclusive_roles:
+    - - 'beginner'
+      - 'intermediate'
+      - 'advanced'
+      - 'norwegian native speaker'
+      - 'swedish native speaker'
+      - 'danish native speaker'
+    - - 'nynorsk'
+      - 'bokmål'
+      #- 'swedish native speaker' # Maybe a bit too strict.
+      #- 'danish native speaker'  # Maybe a bit too strict.
+  # Shortcodes do not work. You will have to use the unicode character, '🤔' or escape the shortcode \:thinking:
+  :emoji_react_channels:
+    493501920082657290: #→ suggestions
+      - ⬆
+      - ⬇
+      - ↕
+  # Which channels to check for activity.
+  :server_activity_channels:
+    202189706383982605: generelt #→ conversation
+    283985790290231296: lettloff #→ lettloff
+    212674987788599296: lofferundt #→ loffe_rundt
+
+#

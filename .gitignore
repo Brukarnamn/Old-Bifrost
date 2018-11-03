@@ -1,0 +1,25 @@
+# DO NOT STORE the bot's secret keys.
+/data/secrets.yml
+
+/data/server_data.sqlite3
+
+#/data/bot_command_texts/
+/data/bot_exercises/
+/data/bot_inactivity_stuff/
+#/data/bot_texts/
+/data/ordbok_uib_no
+
+/lib/bifrost_bot/other/
+/lib/discordrb-master/
+
+/logs/
+/source_for_broken_stuff/
+/tests/
+/tmp/
+
+/.bundle/
+/.git/
+/bin/
+/sqlite3/
+/Gemfile.lock
+

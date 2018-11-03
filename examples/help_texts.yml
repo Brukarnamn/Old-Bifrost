@@ -1,0 +1,45 @@
+# http://www.yaml.org/spec/1.2/spec.html
+# https://en.wikipedia.org/wiki/YAML#Design
+#
+# Place the file in the data/bot_texts folder.
+# Create this folder if it doesn't exists.
+#
+---
+
+help:
+  :title: Bifrost-bot – Help
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - 'Created by **Noko** for the **English-Norwegian Language Exchange** server, with inspiration from **Yoshi**.'
+    - 'In loving memory of <@250050115102965760> (2016-2017). Hvil i fred. :sob:'
+    - ''
+    - 'Source code for this bot can be found at:'
+    - '  https://github.com/Brukarnamn/Bifrost'
+    - ''
+    - 'All bot commands start with a `!` as the very first character on a new text line, immediately followed by the command itself.'
+    - 'Overview of the different help commands:'
+  :footer:
+    :text: 'In loving memory of `Askeladden` (2016-2017). Hvil i fred.'
+  :fields:
+    # First part.
+    - :name: '`!help`'
+      :value:
+        - 'This text.'
+      :inline: true
+    # Another part.
+    - :name: '`!help-roles`'
+      :value:
+        - 'List of commands to add/remove'
+        - 'a user-role from yourself.'
+      :inline: true
+    # Another part
+    - :name: '`!help-faq`'
+      :value:
+        - 'List of frequently asked questions.'
+      :inline: true
+    # Another part
+    - :name: '`!help-other`'
+      :value:
+        - 'List of other commands.'
+      :inline: true
+

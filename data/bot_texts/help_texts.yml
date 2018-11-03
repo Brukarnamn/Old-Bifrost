@@ -1,0 +1,246 @@
+# http://www.yaml.org/spec/1.2/spec.html
+# https://en.wikipedia.org/wiki/YAML#Design
+#
+# Place the file in the data/bot_texts folder.
+#
+---
+
+hjelp:
+  :mapping: help
+  :title: Bifrost-bot – Help
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - Created by <@210866460950659072> for the **English-Norwegian Language Exchange** (ENLE) server, with inspiration from **Yoshi**.
+    - 'In loving memory of <@361587053042991125> (2016-2017). Høgt elska, djupt sakna. :sob:'
+    - ''
+    - 'Source code for this bot can be found at:'
+    - '• https://github.com/Brukarnamn/Bifrost'
+    - ''
+    - All bot commands start with a `!` as the very first character in a new Discord message, immediately followed by the command itself.
+    - 'Overview of the different help commands:'
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '!**help**'
+      :value:
+        - This text.
+      :inline: true
+    # Another part.
+    - :name: '!**help roles**  !**role**'
+      :value:
+        - List of commands to add/remove
+        - a user-role from yourself.
+      :inline: true
+    # Another part
+    - :name: '!**help faq**'
+      :value:
+        - List of frequently asked questions.
+      :inline: true
+    # Another part
+    - :name: '!**help other**'
+      :value:
+        - List of various other commands.
+      :inline: true
+    # Another part
+    - :name: '!**help mod**'
+      :value:
+        - List of various moderator commands.
+      :inline: true
+#
+
+hjelp_roller:
+  :mapping: help roles
+  :title: Bifrost-bot – Help role commands
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - List of supported commands to add/remove a user role from yourself. At the start of a new Discord message type `!role <...>` where you replace `<...>` with the role you want to add or remove. Alternatively you can (currently) use the short forms listed below.
+    - Type `!faq roles` to see more information about each user role.
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '!**beginner**'
+      :value:
+        - Norwegian language beginner role.
+        - CEFR level A1-A2.
+      :inline: true
+    # Another part.
+    - :name: '!**intermediate**'
+      :value:
+        - Norwegian language intermediate role.
+        - CEFR level B1-B2.
+      :inline: true
+    # Another part.
+    - :name: '!**native**'
+      :value:
+        - Norwegian native speaker role.
+      :inline: true
+    # Another part
+    - :name: '!**bokmål**  !**bokmal**  !**bokmaal**'
+      :value:
+        - For members who primarily use *bokmål*
+        - when they write Norwegian.
+      :inline: true
+    # Another part
+    - :name: '!**nynorsk**'
+      :value:
+        - For members who primarily use *nynorsk*
+        - when they write Norwegian.
+      :inline: true
+    # Another part.
+    - :name: '!**comp**'
+      :value:
+        - Computer-Wannabe role.
+      :inline: true
+    # Another part.
+    - :name: '!**popcorn**'
+      :value:
+        - Norwegian media clips-role.
+      :inline: true
+    # Another part.
+    - :name: ━━━━━━━━━━━━━━━━━━━━
+      :value:
+        - 'Other user roles assigned by moderators:'
+      :inline: false
+    # Another part.
+    # https://cefr.folkeuniversitetet.no/
+    - :name: '!**advanced**'
+      :value:
+        - Norwegian language advanced role.
+        - CEFR level C1-C2.
+      :inline: true
+    # Another part
+    - :name: '!**swedish**'
+      :value:
+        - Swedish native speaker role.
+      :inline: true
+    # Another part
+    - :name: '!**danish**'
+      :value:
+        - Danish native speaker role.
+      :inline: true
+#
+
+hjelp_annet:
+  :mapping: help other
+  :title: Bifrost-bot – Help other commands
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - 'Other commands the bot might respond to:'
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '!**nb**  !**bm**'
+      :value:
+        - Search the [ordbok.uib.no](https://ordbok.uib.no) dictionary for a *bokmål* word.
+        - The word you search for must be the word that is present as the main dictionary entry. The [`click here`](https://ordbok.uib.no) text will have the link to the full dictionary entry where you can find a brief definition of the word and its inflection pattern. Usually some example sentences can be found too.
+      :inline: true
+    # Another part.
+    - :name: '!**nbu**  !**nbe**  !**bmu**  !**bme**'
+      :value:
+        - Expanded (*utvidet*) version of the previous command.
+        - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
+      :inline: true
+    # Another part.
+    - :name: '!**nn**'
+      :value:
+        - Search the [ordbok.uib.no](https://ordbok.uib.no) dictionary for a *nynorsk* word.
+        - The word you search for must be the word that is present as the main dictionary entry. The [`click here`](https://ordbok.uib.no) text will have the link to the full dictionary entry where you can find a brief definition of the word and its inflection pattern. Usually some example sentences can be found too.
+      :inline: true
+    # Another part.
+    - :name: '!**nnu**  !**nne**'
+      :value:
+        - Expanded (*utvidet*) version of the previous command.
+        - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
+      :inline: true
+    # Another part.
+    - :name: '!**oppgave**  !**oppgåve**  !**opp**  !**øvelse**  !**øving**  !**test**  !**practise**  !**practice**  !**exercise**'
+      :value:
+        - Get a random Norwegian exercise sent to you in a private message.
+        - In private messages you can drop the `!` at the start.
+      :inline: true
+    # Another part.
+    - :name: '!**vis**  !**show**'
+      :value:
+        - Re-show the last Norwegian exercise you were given.
+        - In private messages you can drop the `!` at the start.
+      :inline: true
+    # Another part.
+    - :name: '!**svar**  !**answer**'
+      :value:
+        - Answer the exercise you have been given.
+        - In private messages you can drop the `!` at the start.
+      :inline: true
+    # Another part.
+    - :name: '!**status** [@user]'
+      :value:
+        - Show a summary of your current status with the exercises.
+        - If you want to show for another user you can add their
+        - '@user-tag.'
+        - In private messages you can drop the `!` at the start.
+      :inline: true
+    # Another part.
+    - :name: '!**reset**'
+      :value:
+        - Reset all your current status counts with the exercises to 0.
+        - In private messages you can drop the `!` at the start.
+      :inline: true
+    # Another part.
+    - :name: '!**ping**'
+      :value:
+        - Answer with a Pong.
+        - To check if <@361253623881269258> is awake or fell asleep.
+      :inline: true
+    # Another part.
+    - :name: '!**sillystuff**'
+      :value:
+        - List of various silly nonsense commands.
+        - Shows various one-liners before they disappear.
+      :inline: true
+#
+
+hjelp_moderator:
+  :mapping: help mod
+  :title: Bifrost-bot – Help other commands
+  :title_url: https://github.com/Brukarnamn/Bifrost
+  :description:
+    - 'Some of the moderator commands the bot might respond to (**if** you have permission to use them):'
+  :footer:
+    :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
+  :fields:
+    # First part. Discord has a limit of 25 field parts.
+    - :name: '!**juks**  !**cheat**'
+      :value:
+        - Send the solution for the current inactivity question in a private message (if a solution is provided).
+        - Try to provide hints before you spoil the answer.
+        - Add an optional **list** after the command if it isn't obvious who else viewed the spoiler.
+      :inline: true
+    # Another part.
+    - :name: '!**userinfo**'
+      :value:
+        - Show some information about a user.
+      :inline: true
+    # Another part.
+    - :name: '!**banuser** <user_id> <reason_for_ban>'
+      :value:
+        - Attempt to ban the user with the given *<user_id>* from the server.
+        - A reason is necessary for this command to work.
+      :inline: true
+    # Another part.
+    - :name: '!**serverinfo**'
+      :value:
+        - Show some information about the server.
+      :inline: true
+    # Another part.
+    - :name: '!**reloadsettings**'
+      :value:
+        - Reload the configuration files.
+      :inline: true
+    ## Another part.
+    #- :name: '!**fetch**  !**fetchall**'
+    #  :value:
+    #    - Check the source code.
+    #  :inline: true
+#

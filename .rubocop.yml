@@ -1,0 +1,124 @@
+# https://rubocop.readthedocs.io/en/latest/
+AllCops:
+  TargetRubyVersion: 2.5
+
+
+
+# https://rubocop.readthedocs.io/en/latest/cops_layout/
+Layout/TrailingWhitespace:
+  Enabled: true
+  #AutoCorrect: true
+
+Layout/LeadingCommentSpace:
+  #Enabled: true
+  Enabled: false
+
+Layout/TrailingBlankLines:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLines:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLinesAroundAccessModifier:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLineBetweenDefs:
+  #Enabled: true
+  #NumberOfEmptyLines: 1
+  NumberOfEmptyLines: [1,5]
+
+Layout/CommentIndentation:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLinesAroundModuleBody:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLinesAroundClassBody:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyLineAfterMagicComment:
+  #Enabled: true
+  Enabled: false
+
+Layout/EmptyComment:
+  #Enabled: true
+  Enabled: false
+
+
+
+# https://rubocop.readthedocs.io/en/latest/cops_lint/
+Lint/UselessAccessModifier:
+  #Enabled: true
+  Enabled: false
+
+
+
+# https://rubocop.readthedocs.io/en/latest/cops_metrics/
+Metrics/LineLength:
+  #Max: 80
+  Max: 9999
+
+Metrics/ModuleLength:
+  #Max: 100
+  Max: 4200
+
+Metrics/ClassLength:
+  #Max: 100
+  Max: 4200
+
+Metrics/MethodLength:
+  #Max: 10
+  Max: 1250
+
+Metrics/ParameterLists:
+  Enabled: true
+  #Enabled: false
+  #Max: 5
+  Max: 10
+
+Metrics/BlockLength:
+  #Max: 25
+  Max: 1250
+
+Metrics/AbcSize:
+  #Max: 15
+  Max: 515
+
+Metrics/CyclomaticComplexity:
+  #Max: 6
+  Max: 606
+
+Metrics/PerceivedComplexity:
+  #Max: 7
+  Max: 707
+
+
+
+# https://rubocop.readthedocs.io/en/latest/cops_style/
+Style/AsciiComments:
+  #Enabled: true
+  Enabled: false
+
+Style/Encoding:
+  Enabled: true
+
+Style/BlockComments:
+  #Enabled: true
+  Enabled: false
+
+Style/NegatedIf:
+  #Enabled: true
+  Enabled: false
+  #EnforcedStyle: both
+  #EnforcedStyle: prefix
+  #EnforcedStyle: postfix
+
+Style/NegatedWhile:
+  Enabled: true
+  #Enabled: false

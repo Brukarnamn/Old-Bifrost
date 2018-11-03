@@ -1,0 +1,70 @@
+# http://www.yaml.org/spec/1.2/spec.html
+# https://en.wikipedia.org/wiki/YAML#Design
+#
+# Place the file in the data/bot_command_texts folder.
+#
+# WARNING:
+#
+# Everything needs to be under the
+#   :bot_event_responses
+# main key, or else it will be taken as individual invalid configurations
+# and ignored when the bot reads the file.
+#
+---
+:bot_event_responses:
+
+  ################################################################################
+  # Bot response strings for when various events happen.
+  #
+  :channel_update:      'Channel ##CHANNEL_MENTION## (id: ##CHANNEL_ID##) got **UPDATED**. Check the audit log for specific details.'
+  :heartbeat:           '❤' # Currently hardcoded to ' ... '
+  :member_join:         "Hi, ##USER_MENTION## (id: ##USER_ID##), and welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :member_rejoin:       "Hi again, ##USER_MENTION## (id: ##USER_ID##), and welcome back to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :member_join_mod:     '**##USER_NAME##**###USER_DISCRIMINATOR## (id: ##USER_ID##) just **JOINED**. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
+  :member_leave:        "**##USER_NAME##** (id: ##USER_ID## = ##USER_MENTION##) forlot nettopp serveren. Adjø og ha det bra, **##USER_NAME##**!\n##LOCAL_EVENT_STRING##"
+  :member_leave_mod:    '**##USER_NAME##**###USER_DISCRIMINATOR## (id: ##USER_ID##) just **LEFT**. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
+  #:member_update:       'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = ##USER_DISTINCT_BOLD####LOCAL_EVENT_STRING_2##'
+  :member_update:       'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = ##USER_DISTINCT_BOLD## = ##USER_MENTION####LOCAL_EVENT_STRING_2##'
+  :member_update_mod:   'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = **##USER_NAME##**###USER_DISCRIMINATOR####LOCAL_EVENT_STRING_2##. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
+  :mention:             'Hei ##USER_MENTION##, er det noe jeg kan hjelpe deg med?'
+  :message_delete:      'Message **DELETED**: In ##LOCAL_EVENT_STRING##, written by ##LOCAL_EVENT_STRING_2## = ##LOCAL_EVENT_STRING_3## ← Deleted by ##LOCAL_EVENT_STRING_4##'
+  :message_edit:        'You changed the message...' # Currently not used / only during testing.
+  :message:             'Kommando: **##LOCAL_EVENT_STRING##**, tillegg: ##LOCAL_EVENT_STRING_2##' # Currently not used / only during testing.
+  #:presence_update:     'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = ##USER_DISTINCT_BOLD####LOCAL_EVENT_STRING_2##'
+  :presence_update:     'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = ##USER_DISTINCT_BOLD## = ##USER_MENTION####LOCAL_EVENT_STRING_2##'
+  :presence_update_mod: 'User **##LOCAL_EVENT_STRING##** changed: User ##USER_ID## = **##USER_NAME##**###USER_DISCRIMINATOR####LOCAL_EVENT_STRING_2##. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
+  :private_message:     '' # Currently not used.
+  :raw_event:           'Channel **##CHANNEL_NAME##** (##CHANNEL_ID##) got **UPDATED**. Check the audit log for specific details.'
+  :user_ban:            '**BANNED**: User ##USER_ID## = ##USER_DISTINCT_BOLD## ← Banned by ##LOCAL_EVENT_STRING## ← Reason: ##LOCAL_EVENT_STRING_2##'
+  :user_unban:          '**UNBANNED**: User ##USER_ID## = ##USER_DISTINCT_BOLD## ← Unbanned by ##LOCAL_EVENT_STRING##'
+  :user_kick:           '**KICKED**: User ##USER_ID## = ##USER_DISTINCT_BOLD## ← Kicked by ##LOCAL_EVENT_STRING## ← Reason: ##LOCAL_EVENT_STRING_2##'
+
+  # Often used responses (not necessarily events), or used as a secondary string in event responses.
+  :user_has_nick:       ' → ##USER_NICK_BOLD##'
+  :user_modchanged:     ' ← Changed by ##LOCAL_EVENT_STRING##'
+  :illegal_cmd:         'What are you trying to do, ##USER_MENTION##? :thinking:'
+  :spamming_cmds:       '##USER_MENTION##, calm down for at least **##LOCAL_EVENT_STRING##** seconds. Or ask the other people here for valid commands and how to control me.'
+  :command_usage:       'Use `##LOCAL_EVENT_STRING## <...>` where where you replace `<...>` with one of the following commands. For example `##LOCAL_EVENT_STRING_2##`'
+  :roles_not_unique:    'WARNING: The server has several roles with the name **##LOCAL_EVENT_STRING##**. This needs to be fixed, ##MODERATOR_PING##. ##LOCAL_EVENT_STRING_2##'
+  :role_not_found:      "ERROR: Can't find the role **##LOCAL_EVENT_STRING##** which is defined in the configuration file. This needs to be fixed, ##MODERATOR_PING##."
+  :role_added:
+    :generic:           'Added the **##LOCAL_EVENT_STRING##** role to you, ##USER_MENTION##'
+    BEGINNER:           'Added the **Norwegian beginner** role to you, ##USER_MENTION##'
+    INTERMEDIATE:       'Added the **Norwegian intermediate** role to you, ##USER_MENTION##'
+    ADVANCED:           'Added the **Norwegian advanced role** to you, ##USER_MENTION##'
+  :role_removed:
+    :generic:           'Removed the **##LOCAL_EVENT_STRING##** role from you, ##USER_MENTION##'
+    BEGINNER:           'Removed the **Norwegian beginner** role from you, ##USER_MENTION##'
+    INTERMEDIATE:       'Removed the **Norwegian intermediate** role from you, ##USER_MENTION##'
+    ADVANCED:           'Removed the **Norwegian advanced role** from you, ##USER_MENTION##'
+  :user_nicks:          "Other previous names: ##LOCAL_EVENT_STRING##"
+  :user_nicks_loc:      "Andre tidligere navn: ##LOCAL_EVENT_STRING##"
+  :user_messages:       "User ##USER_ID## = ##USER_DISTINCT_BOLD## last ##LOCAL_EVENT_STRING## (or less) messages"
+
+  # These messages are not proper events, so does not have an event object to handle variable substitution.
+  :ready:               'Oops! I think I fell asleep for a little bit! I wonder what I missed...'
+  :mass_join_start:     'While I was sleeping the following users **JOINED**:'
+  :mass_join_msg:       "Welcome to this server for **Norwegian language learning** and practice!\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :mass_leave:          'While I was sleeping the following users **LEFT**:'
+  :mass_and:            'and' # A, B and C
+
