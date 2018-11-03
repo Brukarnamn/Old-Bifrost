@@ -129,14 +129,14 @@ Build and install this gem
 
 ### 3
 
-Then run `bundle install`
+Then run `bundle install` (needs to be fixed, in the meantime you can manually install:)
 
-  gem install bundler rake ast ffi unf_ext unf domain_name http-cookie mime-types-data mime-types netrc rest-client --platform=ruby
-  gem install discordrb-webhooks opus-ruby rbnacl event_emitter websocket websocket-client-simple discordrb --platform=ruby
-  gem install imgkit json mini_portile2 parallel parser powerpack rainbow ruby-progressbar unicode-display_width rubocop --platform=ruby
-  gem install thor yard eventmachine reverse_markdown kramdown htmlentities coderay jaro_winkler tilt solargraph --platform=ruby
-  gem install awesome_print --platform=ruby
-  gem install nokogiri hpricot --platform=ruby
+* gem install bundler rake ast ffi unf_ext unf domain_name http-cookie mime-types-data mime-types netrc rest-client --platform=ruby
+* gem install discordrb-webhooks opus-ruby rbnacl event_emitter websocket websocket-client-simple discordrb --platform=ruby
+* gem install imgkit json mini_portile2 parallel parser powerpack rainbow ruby-progressbar unicode-display_width rubocop --platform=ruby
+* gem install thor yard eventmachine reverse_markdown kramdown htmlentities coderay jaro_winkler tilt solargraph --platform=ruby
+* gem install awesome_print --platform=ruby
+* gem install nokogiri hpricot --platform=ruby
 
 ### Ruby 2.5 WARNING
 
