@@ -30,29 +30,28 @@ The bridge will collapse when the sons of Muspell ride it during Ragnarok.
   user writes.
 
 * Output a custom message when a user join or leaves.
+  With the exception of usernames matching a customizable "URL-filter".
 
 * Output the audit log to a "primary" server channel for the Ban, Kick,
-  Username, Nickname, Avatar, MessageDelete events.
+  and MessageDelete events.
   Output the audit log to a "secondary" server channel for the MessageDelete
-  event with more detailed information.
+  event with more detailed information, in addition to the Avatar,
+  Username, and Nickname events.
 
 ## To-do list
 
 * Blacklist of user-ids that will flag the moderators if any of these
   user-id should join.
 
-* Auto-ban of users with username and/or nick spelled as an url.
-
-* Handle the server role events so the bot does not need to be restarted
-  if you change any of your role names.
-  Your configuration file might still need to be changed though.
-
 ## Known issues
 
 * The server's role names need to be uniquely spelled for the mapping from
   role command into role names to work properly.
-    Test_123456789012345678 → Test Role Name
-    Test_234567890123456789 → Test Role Name
+
+  * Test_123456789012345678 → Test Role Name
+  * Test_234567890123456789 → Test Role Name
+
+  Both map into the same.
 
 ## Installation
 
@@ -63,18 +62,13 @@ The following Ruby gems are required in order to run the bot:
   * <http://www.rubydoc.info/github/meew0/discordrb/toplevel>
 * `sqlite3` (and its dependencies) for some persistent storage.
   * <https://sqlite.org/download.html>
-* `nokogiri` (and its dependencies) to parse web pages.
-  * <http://www.rubydoc.info/github/sparklemotion/nokogiri/Nokogiri/XML/Node>
-* `imgkit` and its dependencies to convert from html to image.
-  * <https://github.com/csquared/IMGKit>
-  * <https://wkhtmltopdf.org/downloads.html>
+* `hpricot` (and its dependencies) to parse html.
 
 ### 1
 
 Update all installed gems.
 
   `gem update --platform=ruby`
-  `gem dependency openssl`
 
 If and only if you have two versions of openssl:
 For example if you get LoadError (... Ruby25-x64/lib/ruby/gems/2.5.0/gems/openssl-2.1.2/lib/openssl.so)
@@ -146,12 +140,12 @@ Then run `bundle install`
 
 ### Ruby 2.5 WARNING
 
-There is a broken dependency in the latest gem (3.2.1) and for Windows Ruby 2.5 users, you'll find the library silently errors out.
+There is a broken dependency in the latest gem (3.2.1) and for some Windows Ruby 2.5 users, you'll find the library silently errors out.
 This is fixed in the master version, so to fix this, you can either
 
 * use up to date master (We recommend using bundler. See ?ahh bundler for more information)
 * install the gem dependency with `gem install rest-client --pre --platform=ruby`
-* Use Ruby 2.4 or under.
+* Use Ruby 2.4 or under, or the latest 2.5 available, with bugfixes.
 
 ### 4
 
@@ -169,6 +163,8 @@ Edit
 
 in the `data` folder and fill in your server's IDs and channel IDs.
 
+  <https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID->
+
 ### 6
 
 Log in on your existing Discord account (or register a normal Discord account and log in) then go to
@@ -185,30 +181,35 @@ Press `+` for a new app.
 
 Find the permissions the bot should have
 
-  <https://discordapi.com/permissions.html#335612928>
   <https://discordapp.com/developers/docs/topics/permissions#permissions-bitwise-permission-flags>
 
-  READ_MESSAGES         0x00000400  Allows reading messages in a channel. The channel will not appear for users without this permission
-  VIEW CHANNELS         0x00000400  Allows
-  SEND_MESSAGES         0x00000800  Allows for sending messages in a channel
+  (READ_MESSAGES)
+  VIEW CHANNELS         0x00000400  Allows viewing a channel, which includes reading messages in text channels.
+  SEND_MESSAGES         0x00000800  Allows for sending messages in a channel.
 
-  EMBED LINKS           0x........  Allows
-  READ_MESSAGE_HISTORY  0x00010000  Allows for reading of message history
-  ADD REACTIONS         0x........
+  EMBED LINKS           0x00004000  Links sent by users with this permission will be auto-embedded.
+  READ_MESSAGE_HISTORY  0x00010000  Allows for reading of message history.
+  ADD REACTIONS         0x00000040  Allows for the addition of reactions to messages.
 
-  VIEW AUDIT LOG        0x........  
+  VIEW AUDIT LOG        0x00000080  Allows for viewing of audit logs
   CHANGE_NICKNAME       0x04000000  Allows for modification of own nickname
 
-	= 67194048
+  = 67194048
+  <https://discordapi.com/permissions.html#67194048>
 
   MANAGE_ROLES          0x10000000  Allows management and editing of roles
-  BAN MEMBERS           0x........  Allows removing members
 
-	= 335629508
+  = 335629504
+  <https://discordapi.com/permissions.html#335629504>
+
+  BAN MEMBERS           0x00000004  Allows banning members
+
+  = 335629508
+  <https://discordapi.com/permissions.html#335629508>
 
 and then a server owner/admin have to invite the bot:
 
   <https://discordapp.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=0>
 
-  <https://discordapp.com/oauth2/authorize?client_id=&scope=bot&permissions=335612928> - livebot
-  <https://discordapp.com/oauth2/authorize?client_id=&scope=bot&permissions=335612928> - testbot
+  <https://discordapp.com/oauth2/authorize?client_id=&scope=bot&permissions=335629504> - livebot
+  <https://discordapp.com/oauth2/authorize?client_id=&scope=bot&permissions=335629504> - testbot
