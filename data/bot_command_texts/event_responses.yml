@@ -64,7 +64,7 @@
   # These messages are not proper events, so does not have an event object to handle variable substitution.
   :ready:               'Oops! I think I fell asleep for a little bit! I wonder what I missed...'
   :mass_join_start:     'While I was sleeping the following users **JOINED**:'
-  :mass_join_msg:       "Welcome to this server for **Norwegian language learning** and practice!\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :mass_join_msg:       "Welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
   :mass_leave:          'While I was sleeping the following users **LEFT**:'
   :mass_and:            'and' # A, B and C
 
