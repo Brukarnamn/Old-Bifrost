@@ -1,6 +1,7 @@
 # DO NOT STORE the bot's secret keys.
 /data/secrets.yml
 
+/data/server_data.sqlite
 /data/server_data.sqlite3
 
 #/data/bot_command_texts/
