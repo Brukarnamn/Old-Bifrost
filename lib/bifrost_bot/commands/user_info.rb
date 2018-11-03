@@ -33,15 +33,15 @@ module BifrostBot
         # but just in case there was a brainfart somewhere.
         return nil if helper_obj.is_private_message
 
-        if !helper_obj.user_is_server_moderator?
-          #response_str = BOT_CONFIG.bot_event_responses[:illegal_cmd]
-          #response_str = helper_obj.substitute_event_vars response_str
+        #if !helper_obj.user_is_server_moderator?
+        #  #response_str = BOT_CONFIG.bot_event_responses[:illegal_cmd]
+        #  #response_str = helper_obj.substitute_event_vars response_str
+        #
+        #  #event_obj.respond response_str
+        #  return nil
+        #end
 
-          #event_obj.respond response_str
-          return nil
-        end
-
-        if !helper_obj.command_args_str.empty?
+        if !helper_obj.command_args_str.empty? && helper_obj.user_is_server_moderator?
           tagged_user = BOT_OBJ.parse_mention(helper_obj.command_args_str)
           # <User username=Bifrost-dev id=361603350975741952 discriminator=0209>
           #ap tagged_user
