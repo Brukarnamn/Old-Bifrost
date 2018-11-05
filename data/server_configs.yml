@@ -327,8 +327,8 @@
   :audit_spam_mod_channel_id: 494295091419283497 #→ bot_log_moderator_only
   :audit_spam_public_channel_id: 508007942650593320 #→ bot_log
   :exercises_channel_id: -1
-  :word_inflection_image_folder: 'c:/BifrostBot/data/ordbok_uib_no'
-  :moderator_ping: '<@493483280897933315>'
+  :word_inflection_image_folder: 'c:/Kode/BifrostBot/data/ordbok_uib_no'
+  :moderator_ping: '<@&493483280897933315>'
   :moderator_role_ids:
     - 493480707457286145 #→ Administrator → mentionable
     - 493483280897933315 #→ Moderator → mentionable

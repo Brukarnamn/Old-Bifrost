@@ -18,8 +18,8 @@
   #
   :channel_update:      'Channel ##CHANNEL_MENTION## (id: ##CHANNEL_ID##) got **UPDATED**. Check the audit log for specific details.'
   :heartbeat:           '❤' # Currently hardcoded to ' ... '
-  :member_join:         "Hi, ##USER_MENTION## (id: ##USER_ID##), and welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
-  :member_rejoin:       "Hi again, ##USER_MENTION## (id: ##USER_ID##), and welcome back to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :member_join:         "Hi, ##USER_MENTION## (id: ##USER_ID##), and welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level please type `!beginner`, `!intermediate` or `!native`. If you're at C1-C2 level please contact a mod for the advanced role. Check out <#493181320424325150> if you're unsure which level you're at.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :member_rejoin:       "Hi again, ##USER_MENTION## (id: ##USER_ID##), and welcome back to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level please type `!beginner`, `!intermediate` or `!native`. If you're at C1-C2 level please contact a mod for the advanced role. Check out <#493181320424325150> if you're unsure which level you're at.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
   :member_join_mod:     '**##USER_NAME##**###USER_DISCRIMINATOR## (id: ##USER_ID##) just **JOINED**. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
   :member_leave:        "**##USER_NAME##** (id: ##USER_ID## = ##USER_MENTION##) forlot nettopp serveren. Adjø og ha det bra, **##USER_NAME##**!\n##LOCAL_EVENT_STRING##"
   :member_leave_mod:    '**##USER_NAME##**###USER_DISCRIMINATOR## (id: ##USER_ID##) just **LEFT**. Consider **WARNING**/**BANNING** ##USER_MENTION## ⁉'
@@ -64,7 +64,7 @@
   # These messages are not proper events, so does not have an event object to handle variable substitution.
   :ready:               'Oops! I think I fell asleep for a little bit! I wonder what I missed...'
   :mass_join_start:     'While I was sleeping the following users **JOINED**:'
-  :mass_join_msg:       "Welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level you can type `!role` to see your options.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
+  :mass_join_msg:       "Welcome to this server for **Norwegian language learning** and practice!\nTo show others your Norwegian proficiency level please type `!beginner`, `!intermediate` or `!native`. If you're at C1-C2 level please contact a mod for the advanced role. Check out <#493181320424325150> if you're unsure which level you're at.\nPlease see the ##INFO_CHANNEL_MENTION## channel for some basic information. We hope you enjoy your stay."
   :mass_leave:          'While I was sleeping the following users **LEFT**:'
   :mass_and:            'and' # A, B and C
 

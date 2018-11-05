@@ -48,12 +48,14 @@ module BifrostBot
         if helper_obj.url_username?
           config_str = BOT_CONFIG.bot_event_responses[:member_leave_mod]
           config_str = helper_obj.substitute_event_vars(config_str)
+
+          BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, config_str)
         else
           config_str = BOT_CONFIG.bot_event_responses[:member_leave]
           config_str = helper_obj.substitute_event_vars(config_str, previous_nicks_str)
-        end
 
-        BOT_OBJ.send_message(BOT_CONFIG.default_channel_id, config_str)
+          BOT_OBJ.send_message(BOT_CONFIG.default_channel_id, config_str)
+        end
 
         # If the user got banned an UserBanEvent got triggered.
         # But there is no event for Kick.

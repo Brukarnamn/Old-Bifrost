@@ -44,7 +44,6 @@ module BifrostBot
         nil
       end
 
-
     end
     #HeartbeatEvent
   end
