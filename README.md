@@ -2,8 +2,8 @@
 
   <https://github.com/markdownlint/markdownlint/blob/master/docs/RULES.md>
 
-  Written by Noko @ English-Norwegian Language Exchange server.
-  Invite link: <https://discord.gg/8ptUM3d>
+  Written by Noko @ NELLE Discord Server (Norwegian-English Language Learning Exchange.
+  Invite link: <https://discord.gg/deAxeZE>
 
 ## Bifrost / Bivrost / Bifröst / Bilröst
 
