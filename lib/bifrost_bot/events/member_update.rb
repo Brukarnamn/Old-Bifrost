@@ -74,7 +74,7 @@ module BifrostBot
 
         # If the server configuration allows users to change the nick,
         # then the user's server nickname changed.
-        if old_user_obj.nick != new_user_obj.nick
+        if !old_user_obj.nil_or_empty? && !old_user_obj.nick.nil_or_empty? && old_user_obj.nick != new_user_obj.nick
           change_type = BOT_CONFIG.db_message_user_nick
 
           # Store the change type since it is nick change.
@@ -117,7 +117,7 @@ module BifrostBot
 
         # The user had a role added or removed.
         # Convert the hash structures to strings and compare.
-        if old_user_obj.roles.to_s != new_user_obj.roles.to_s
+        if !old_user_obj.nil_or_empty? && old_user_obj.roles.to_s != new_user_obj.roles.to_s
           # Modify the string with type of changes accordingly.
           if change_type.nil?
             change_type = BOT_CONFIG.db_message_user_roles

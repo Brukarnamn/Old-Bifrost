@@ -53,6 +53,8 @@ module BifrostBot
         moduser_short_str = +'**' << moduser_obj.username.to_s << '**#' << moduser_obj.discriminator.to_s
         ban_reason = audit_data_hash[:reason] || '...'
 
+        moduser_short_str = +'**' << BOT_CONFIG.bot_identity << '**' if moduser_obj.id == BOT_CONFIG.client_id
+
         #config_str = +'**BANNED**: User ' << helper_obj.user_id.to_s << ' → ' << helper_obj.user_distinct <<
         #             (helper_obj.user_nick.empty? ? '' : +' → ' << helper_obj.user_nick)
         config_str = BOT_CONFIG.bot_event_responses[:user_ban]
@@ -65,6 +67,7 @@ module BifrostBot
         #  BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, config_str)
         #end
         BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, config_str)
+        BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, config_str)
 
         # Fetch the last N messages that were not deleted less than 2 seconds ago.
         last_user_messages_hash = helper_obj.fetch_user_messages
@@ -75,7 +78,7 @@ module BifrostBot
         delete_header_str = helper_obj.substitute_event_vars(delete_header_str, BOT_CONFIG.user_ban_show_messages_count)
 
         embed_data_hash = {
-          title: delete_header_str,
+          title:  delete_header_str,
           fields: []
         }
 
@@ -91,9 +94,9 @@ module BifrostBot
             is_edited_utc = is_edited ? message_value[:edited_at] : ''
 
             field = {
-              name: +'━━━ ' << message_value[:created_at].to_s << '' <<
-                    (is_edited ? (+' (Edited: ' << is_edited_utc.to_s << ')') : '') <<
-                    ' ━━━ ',
+              name:  +'━━━ ' << message_value[:created_at].to_s << '' <<
+                     (is_edited ? (+' (Edited: ' << is_edited_utc.to_s << ')') : '') <<
+                     ' ━━━ ',
               value: (mobj_message.empty? ? '.' : mobj_message) # To prevent Discord's automatic join messages (which are server made) to cause bugs.
             }
             embed_data_hash[:fields].push(field)

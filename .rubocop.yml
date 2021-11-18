@@ -3,6 +3,7 @@ AllCops:
   TargetRubyVersion: 2.5
 
 
+rubocop.yml: Metrics/LineLength has the wrong namespace - should be Layout The following cops were added to RuboCop, but are not configured. Please set Enabled to either `true` or `false` in your `.rubocop.yml` file. Please also note that you can opt-in to new cops by default by adding this to your config: AllCops: NewCops: enable Gemspec/DateAssignment: # new in 1.10 Enabled: true Gemspec/RequireMFA: # new in 1.23 Enabled: true Layout/LineEndStringConcatenationIndentation: # new in 1.18 Enabled: true Layout/SpaceBeforeBrackets: # new in 1.7 Enabled: true Lint/AmbiguousAssignment: # new in 1.7 Enabled: true Lint/AmbiguousOperatorPrecedence: # new in 1.21 Enabled: true Lint/AmbiguousRange: # new in 1.19 Enabled: true Lint/DeprecatedConstants: # new in 1.8 Enabled: true Lint/DuplicateBranch: # new in 1.3 Enabled: true Lint/DuplicateRegexpCharacterClassElement: # new in 1.1 Enabled: true Lint/EmptyBlock: # new in 1.1 Enabled: true ...
 
 # https://rubocop.readthedocs.io/en/latest/cops_layout/
 Layout/TrailingWhitespace:
@@ -13,7 +14,8 @@ Layout/LeadingCommentSpace:
   #Enabled: true
   Enabled: false
 
-Layout/TrailingBlankLines:
+#Layout/TrailingBlankLines is renamed to:
+Layout/TrailingEmptyLines:
   #Enabled: true
   Enabled: false
 
@@ -50,6 +52,10 @@ Layout/EmptyComment:
   #Enabled: true
   Enabled: false
 
+Layout/LineLength:
+  #Max: 80
+  Max: 9999
+
 
 
 # https://rubocop.readthedocs.io/en/latest/cops_lint/
@@ -60,9 +66,10 @@ Lint/UselessAccessModifier:
 
 
 # https://rubocop.readthedocs.io/en/latest/cops_metrics/
-Metrics/LineLength:
-  #Max: 80
-  Max: 9999
+#Metrics/LineLength is moved to Layout/LineLength
+# Layout/LineLength:
+#   #Max: 80
+#   Max: 9999
 
 Metrics/ModuleLength:
   #Max: 100

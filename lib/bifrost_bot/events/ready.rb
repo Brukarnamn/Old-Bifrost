@@ -17,13 +17,15 @@ module BifrostBot
 
       # https://www.rubydoc.info/github/meew0/discordrb/Discordrb/Events/ReadyEvent
       ready do #|event_obj|
-        #puts Debug.msg('----------ReadyEvent----------')
+        puts Debug.msg('----------ReadyEvent----------')
         #helper_obj = DiscordEventHelper.new event_obj
         #Debug.pp helper_obj
 
         BOT_OBJ.game = BOT_CONFIG.bot_is_playing_game
 
         servers_hash = BOT_OBJ.servers
+    #Debug.pp servers_hash
+    #Debug.pp BOT_CONFIG
         if !servers_hash.key?(BOT_CONFIG.bot_runs_on_server_id)
           Debug.error(+'The bot does not run on the expected server-id: ' << BOT_CONFIG.bot_runs_on_server_id.to_s << ' (from config file).')
           puts(+'Did you mean? ' << servers_hash.keys.join(' | '))
@@ -53,9 +55,11 @@ module BifrostBot
         end
         exit if exit_error
 
+        # puts 'meep5'
         BOT_CACHE.initialize_roles_and_users_and_channels
+        # puts 'meep6'
 
-        if BOT_CONFIG.debug_spammy
+        if true #BOT_CONFIG.debug_spammy
           Debug.divider "#{__FILE__}, #{__LINE__}"
           Debug.pp BOT_CACHE.role_ids
           #Debug.pp BOT_CACHE.role_names
@@ -86,7 +90,15 @@ module BifrostBot
         Debug.warn 'DISABLED SLEEP MESSAGE if the send_message is commented out! ' + config_str
         #channel_obj.send_message(config_str)
 
+        #!
+        #! Comment out this to not show joins/leaves after a disconnect/restart.
+        #! Might want to do this after a deleting/purging the database-file, or
+        #! else there will be a LOT OF JOIN spam!
+        #!
         BOT_CACHE.show_users_that_joined_and_left
+        #!
+        #!
+        #!
 
         admin_system_code = BOT_CONFIG.bot_system_code
         LOGGER.info 'Bot is finally ready. Starting system code: ' + Debug.msg(admin_system_code)

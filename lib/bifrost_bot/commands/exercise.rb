@@ -253,8 +253,10 @@ module BifrostBot
           'Exercises shown:':        exercise_user_obj.number_of_shown.to_s,
           'Answers made:':           exercise_user_obj.number_of_answers.to_s,
           'Current correct streak:': exercise_user_obj.correct_streak_count.to_s,
+          'Highest correct streak:': exercise_user_obj.highest_correct_streak_count.to_s,
           'Correct:':                exercise_user_obj.number_of_correct.to_s,
-          'Wrong:':                  exercise_user_obj.number_of_wrong.to_s
+          'Wrong:':                  exercise_user_obj.number_of_wrong.to_s,
+          'Stat resets:':            exercise_user_obj.reset_count.to_s
         }
         stat_values.each do |key, value|
           user_status_embed_hash[:fields].push(name: key, value: value, inline: true)
@@ -326,10 +328,10 @@ module BifrostBot
 
         if BOT_CONFIG.debug_spammy
           _debug_data_hash = {
-            key: exercise_category_entry_key,
+            key:    exercise_category_entry_key,
             subkey: exercise_subcategory_entry_key,
-            index: exercise_subcategory_array_random_index,
-            data: chosen_exercise_data_hash
+            index:  exercise_subcategory_array_random_index,
+            data:   chosen_exercise_data_hash
           }
           #puts Debug.msg("#{__FILE__},#{__LINE__}:"), Debug.pp(_debug_data_hash, 0, false) if BOT_CONFIG.debug_spammy
         end
@@ -382,7 +384,7 @@ module BifrostBot
         if BOT_CONFIG.debug_spammy
           _debug_data_hash = {
             exeobjhash: exercise_obj_hash,
-            exeobj: chosen_exercise_obj
+            exeobj:     chosen_exercise_obj
           }
           #puts Debug.msg("#{__FILE__},#{__LINE__}:"), Debug.pp(_debug_data_hash, 0, false) if BOT_CONFIG.debug_spammy
         end
@@ -431,8 +433,8 @@ module BifrostBot
       def self.choose_exercise_subcategory(exercise_category_entry_key)
         exercises_data_hash = BOT_CONFIG.bot_exercises
         return_datahash = {
-          key:   nil,
-          error: nil,
+          key:        nil,
+          error:      nil,
           title_text: nil,
           task_text:  nil
         }

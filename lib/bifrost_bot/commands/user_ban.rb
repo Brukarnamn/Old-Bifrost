@@ -36,10 +36,10 @@ module BifrostBot
         Debug.pp(user_roles: helper_obj.user_roles, mod_roles: BOT_CONFIG.moderator_role_ids) if BOT_CONFIG.debug
 
         if !helper_obj.user_is_server_moderator?
-          #response_str = BOT_CONFIG.bot_event_responses[:illegal_cmd]
-          #response_str = helper_obj.substitute_event_vars response_str
+          response_str = BOT_CONFIG.bot_event_responses[:illegal_ban_cmd]
+          response_str = helper_obj.substitute_event_vars response_str
 
-          #event_obj.respond response_str
+          event_obj.respond response_str
           return nil
         end
 
@@ -53,6 +53,9 @@ module BifrostBot
         response_array.push '!**banuser** <user_id> <ban_reason>' if ban_reason.nil_or_empty?
 
         if !target_user_id.nil_or_empty?
+          #tagged_user = BOT_OBJ.parse_mention(helper_obj.command_args_str)
+          #tagged_user_id = tagged_user.id
+
           # 123456789012345678
           # <@123456789012345678>
           # <@!123456789012345678>
@@ -80,7 +83,7 @@ module BifrostBot
           response_str = 'Done.'
         rescue Discordrb::Errors::NoPermission => err
           Debug.error 'MISSING BOT PERMISSIONS: ' + err.message
-          response_str = err.message
+          response_str = 'Ban user: ' + err.message
         rescue RestClient::NotFound => err
           Debug.error 'USER NOT FOUND: ' + err.message
           response_str = 'User not found.'

@@ -45,7 +45,7 @@ module BifrostBot
     # @param version [String] The version number of the script.
     # @param version_date [String] The version date of the script.
     # @param args [Array<String>] The command line arguments, ARGV.
-    # @return [OpenStruct] The options parsed from the command line arguments.
+    # @return [<OpenStruct>] The options parsed from the command line arguments.
     #
     def parse_command_line_options(version, version_date, args)
       options = OpenStruct.new

@@ -21,7 +21,7 @@ module BifrostBot
 
       # https://www.rubydoc.info/github/meew0/discordrb/Discordrb/Events/HeartbeatEvent
       heartbeat do #|event_obj|
-        #puts Debug.msg('----------HeartbeatEvent----------')
+        puts Debug.msg('----------HeartbeatEvent----------')
         #helper_obj = DiscordEventHelper.new event_obj
         #Debug.pp helper_obj
 

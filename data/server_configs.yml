@@ -28,7 +28,7 @@
 ################################################################################
 # The server IDs of the live server and the test/dev server.
 :test_server_id: 348172070947127306
-:live_server_id: 202189706383982605
+:live_server_id: 622141497332072449
 
 ################################################################################
 # Channel IDs of the bot's communication channels.
@@ -61,15 +61,13 @@
 # Channels and emojies to automatically respond with on every new message.
 :emoji_react_channels: {}
 
-# The maximum period of time (in seconds) that should be allowed between
-# Discord's audit log time and the current time when the bot tries to match
-# an audit entry with an actual event.
-# Experimentation seems to suggest around 15 minutes = 15 * 60 seconds
-:discord_audit_log_max_time: 900
+# Voice chat notifications.
+# Hash of number of people and who to ping.
+:voice_chat_ping_counters: {}
 
-# Number of last messages that should be shown if a user is banned.
-# Max is 25 or the output will fail due to Discord's limits.
-:user_ban_show_messages_count: 17
+# Voice chat delay to see if a person that leaves rejoins.
+# In seconds.
+:voice_chat_rejoin_delay: 60
 
 ################################################################################
 # The bot is running on this server id.
@@ -78,6 +76,9 @@
 
 # Date and time the bot got started.
 :bot_startup_time: ''
+
+# Hardcoded name of the bot, used in some event responses, instead of a @name
+:bot_identity: 'Bifrost'
 
 # If the bot should play a game.
 # This will be shown under the nick in the users listing as
@@ -95,7 +96,7 @@
 # Space divided the command and arguments, so space will never match in this regex.
 # This does not check for the command arguments, which the individual commands
 # themselves would have to check.
-:bot_valid_command_characters: '[a-zA-ZæøåÆØÅ\-_]+'
+:bot_valid_command_characters: '[a-zA-ZæøåÆØÅ0-9\-_]+'
 
 # The emoji to respond with if it successfully got parsed as a valid command and
 # the command method triggered, independently of this method's result.
@@ -122,7 +123,7 @@
 # Others because the contents are dynamically generated commands on their own.
 #
 # The folder these files are in.
-:bot_command_texts_folder: './data/bot_command_texts/'
+:bot_command_texts_folder: '/data/bot_command_texts/'
 
 # The responses to the various events.
 :bot_event_responses: {}
@@ -132,15 +133,15 @@
 :bot_silly_texts: {}
 
 # The responses to FAQs, questions, and so on, are in a folder of their own.
-:bot_texts_folder: './data/bot_texts/'
+:bot_texts_folder: '/data/bot_texts/'
 :bot_texts: {}
 
 # The inactivity messages, riddles, jokes, etc.
-:bot_inactivity_folder: './data/bot_inactivity_stuff/'
+:bot_inactivity_folder: '/data/bot_inactivity_stuff/'
 :bot_inactivity_messages: {}
 
 # The exercises.
-:bot_exercises_folder: './data/bot_exercises/'
+:bot_exercises_folder: '/data/bot_exercises/'
 :bot_exercises: {}
 
 # The default time in seconds that any of the silly text responses will stay in chat
@@ -169,13 +170,31 @@
 # Be VERY CAREFUL that you don't get false positives.
 #
 :illegal_usernames:
-  - bit.+ly
-  #- bitly.+com  # will be caught be the one above.
+  - bit\.ly
+  - bitly.+com
   - discord.+(gg|me)
   - twitch.+tv
   - twitter.+com
   - youtube.+com
   - youtu.+be
+
+# Array of regexpes which will delete a user message if the message matches any of these.
+:illegal_messages:
+  - (best|sex).*dating.+com
+  - discord\.(gg|me)
+  - nudes.+free
+  - dm.+\bn\s*u\s*d\s*e(\s*s)\s+.free
+  - dm.+free.+\bn\s*u\s*d\s*e(\s*s)\b
+  #- https:\/\/tenor\.com
+  #- høgnorsk
+
+# Array of regexpes which will delete a user message if the message matches any of these,
+# but ONLY IF the user also is completely without a role.
+:illegal_messages_roleless:
+  - https?://.+
+  - \.com
+  #- discord.+(gg|me)
+  #- test
 
 # Type \@role_to_tag to get the id(s). Put it inside <@& id_number > to get the tag.
 # Or type \@user_tag to get a user id. Then put it inside <@ id_number > to get the tag.
@@ -186,6 +205,15 @@
 :developer_user_ids:
   - 210866460950659072
 
+# List of one or more user-ids that are allowed to say stuff as the bot itself.
+:bot_impersonator_user_ids:
+  #- 210866460950659072
+  #- 334034939983167491
+
+# A specific channel the typing of the bot impersonator command is restricted to.
+# null = private messages
+:bot_impersonator_in_channel: null
+
 # List of one or more role-ids that are considered moderators, and can do the
 # moderator commands.
 :moderator_role_ids: []
@@ -194,12 +222,34 @@
 # get access to a few more commands.
 :contributor_role_ids: []
 
+# List of one ore more channel-ids that can be used to input text on
+# behalf of the bot.
+:bot_text_input_echo_channels: []
+
+# The maximum period of time (in seconds) that should be allowed between
+# Discord's audit log time and the current time when the bot tries to match
+# an audit entry with an actual event.
+# Experimentation seems to suggest around 15 minutes = 15 * 60 seconds
+:discord_audit_log_max_time: 900
+
+# Number of last messages that should be shown if a user is banned.
+# Max is 25 or the output will fail due to Discord's limits.
+:user_ban_show_messages_count: 17
+
+# How long should it be before deleted messages are actually deleted.
+# 60 * 60 * 24 = 86_400 seconds = 24 hours
+#:deleted_messages_timeout: 86_400
+
+# At what time should it do a purge.
+# This is in the LOCAL TIME for the bot, and needs to be able to be parsed by Time.parse
+:deleted_messages_purge_time: '03:45:43'
+
 ################################################################################
 # To fetch the dictionary pages and make images out of them.
 # File path for the html-to-image application.
 :wkhtmltoimage_exe_path: 'c:/bin/wkhtmltopdf/bin/wkhtmltoimage.exe'
 # And the css-files needed to make it prettier.
-:ordbok_dictionary_css_file_path: './data/ordbok_uib_no/ordbok_uib_no.css'
+:ordbok_dictionary_css_file_path: '/data/ordbok_uib_no/ordbok_uib_no.css'
 # In-memory string of the css.
 :ordbok_dictionary_css: ''
 # Where to store the output file.
@@ -210,10 +260,11 @@
 #   space
 #   dot                .
 #   minus              -
+#   percent            %
 #   unicode letters    \p{L}
 #   unicode diacritics \p{M} and
 #   unicode digits     \p{N}
-:illegal_dictionary_search_characters: '[^ \.\-\p{L}\p{M}]'
+:illegal_dictionary_search_characters: '[^ \.\-%\p{L}\p{M}]'
 
 # The maximum of number of dictionary results to show.
 # The hard coded Discord limit is 25.
@@ -227,7 +278,6 @@
 # How long should it be silence before the bot tries to do something.
 # In seconds.
 #   3600 = 1 hour (60 * 60)
-#:server_inactivity_time: 120
 :server_inactivity_time: 3600
 
 # Only do these checks during this time interval.
@@ -235,8 +285,10 @@
 #
 # These are in the LOCAL TIME for the bot, and needs to be able to be parsed by Time.parse
 # BE CAREFUL in what you put as start and end, as these will be both converted to UTC.
-:server_time_interval_start: '07:30:00' # Will post something at 07.30 if nothing happened the last hour.
-:server_time_interval_end:   '01:00:00' # The bot might post something at 02.00 if the inactivity time is 1 hour.
+#:server_time_interval_start: '07:30:00' # Will post something at 07.30 if nothing happened the last hour.
+#:server_time_interval_end:   '01:00:00' # The bot might post something at 00.59 at the latest if nothing happened since midnight.
+:server_time_interval_start: '02:00:00' # Will post something at 02.00 if nothing happened the last hour.
+:server_time_interval_end:   '01:59:00' # The bot might post something at 00.59 at the latest if nothing happened since midnight.
 
 ################################################################################
 # Server specific settings.
@@ -246,8 +298,8 @@
 :uc_user_role_commands: {}
 :uc_user_exclusive_roles: []
 
-##################################################################################################
-##################################################################################################
+####################################################################################################################################################
+####################################################################################################################################################
 # Test/dev server
 # https://discord.gg/qTG4GQH
 :348172070947127306:
@@ -258,13 +310,15 @@
   :generic_spam_channel_id: 493021578351738881
   :audit_spam_mod_channel_id: 499293333017853964
   :audit_spam_public_channel_id: 499293434134396958
-  :exercises_channel_id: 363718468421419008
+  :exercises_channel_id: 539970521773637635
   :word_inflection_image_folder: 'c:/Kode/BifrostBot/data/ordbok_uib_no'
   :moderator_ping: '<@210866460950659072>'
   :moderator_role_ids:
     - 348172825884098561 # Eier
     - 497818068001751051 # KAFFE
-  :contributor_role_ids: 497822048031342592
+  :contributor_role_ids:
+    - 497822048031342592
+  :bot_impersonator_in_channel: 363718468421419008
 
   # WARNING / BUG:
   # This will fail if you have two roles with the exact same spelling!
@@ -303,78 +357,163 @@
   # Shortcodes do not work. You will have to use the unicode character, '🤔' or escape the shortcode \:thinking:
   :emoji_react_channels:
     493021578351738881:
-      - ⬆
-      - ⬇
-      - ↕
+      # - ⬆
+      # - ⬇
+      # - ↕
+      - 🙂
+      - 😦
+      - 😐
   # Which channels to check for activity.
+  :server_time_interval_start: '01:07:00'
+  :server_time_interval_end:   '01:00:00'
+  :server_inactivity_time: 120
   :server_activity_channels:
     505477824749109249: lettloff #(text) → tilfeldig-1
     505477862577668118: lettloff #(text) → tilfeldig-2
-    505477895330988032: lofferundt #(text) → tilfeldig-3
-    505478089627795477: generelt #(text) → testsetest-privat
+    #505477895330988032: lofferundt #(text) → tilfeldig-3
+    505477895330988032: null #(text) → tilfeldig-3
+    #505478089627795477: generelt #(text) → testsetest-privat
 
-##################################################################################################
-##################################################################################################
-# Live server
-:202189706383982605:
-  #:bot_is_playing_game: "certain people's lack of humour."
+  # Voice chat notifications.
+  :voice_chat_ping_counters:
+    1:  <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 1
+    2:  <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 2
+    3:  <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 3
+    4:  <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 4
+    5:  <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 5
+    10: <@210866460950659072> <@ ..user-id.. > <@& ..role-id.. > 10
+
+####################################################################################################################################################
+####################################################################################################################################################
+# New live NELE server
+:622141497332072449:
   :bot_is_playing_game: "Heimdall's bridge"
-  #:bot_is_playing_game: Cecilie
-  :info_channel_id: 410932875979128842 #→ welcome
-  :default_channel_id: 202189706383982605 #→ conversation
+  :info_channel_id: -1 #→ welcome
+  :default_channel_id: 622141497332072452 #→ conversation
   :role_spam_channel_id: -1
   :generic_spam_channel_id: -1
-  :audit_spam_mod_channel_id: 494295091419283497 #→ bot_log_moderator_only
-  :audit_spam_public_channel_id: 508007942650593320 #→ bot_log
+  :audit_spam_mod_channel_id: 622349611788533760 #→ bot_log_moderator_only
+  :audit_spam_public_channel_id: 622726263538450444 #→ bot_log
   :exercises_channel_id: -1
   :word_inflection_image_folder: 'c:/Kode/BifrostBot/data/ordbok_uib_no'
-  :moderator_ping: '<@&493483280897933315>'
+  :moderator_ping: '<@&622142742478323727>'
   :moderator_role_ids:
-    - 493480707457286145 #→ Administrator → mentionable
-    - 493483280897933315 #→ Moderator → mentionable
-    - 493515246087176193 #→ Mod-Trial → mentionable
-  :contributor_role_ids: 303241177606651905 #→ Contributor → hoisted, mentionable
+    #- 493480707457286145 #→ Owner → mentionable
+    - 622142742478323727 #→ Moderator → mentionable
+  :contributor_role_ids: 123 #→ Contributor → hoisted, mentionable
+  :bot_impersonator_in_channel: 622146034931466242 #→ moderator_chat
+  :bot_impersonator_user_ids:
+    - 210866460950659072 # Noko
+    - 212200534944251905 # Andrew
+    - 218955533288210433 # Babs
+    - 335412722382405632 # Dove
+    - 275713744590602241 # Ponybloom
+    - 124177704298872832 # Alpha
 
-  # WARNING / BUG:
-  # This will fail if you have two roles with the exact same spelling!
-  # Until the code is changed to use unique role-id.
   :user_role_commands:
-    beginner:     'beginner'
-    intermediate: 'intermediate'
-    #advanced:    'advanced'
+    beginner:     'beginner (A1/A2)'
+    nybegynner:   'beginner (A1/A2)'
+    nybegynnar:   'beginner (A1/A2)'
+    a1:           'beginner (A1/A2)'
+    a2:           'beginner (A1/A2)'
+    #nybyrjar:    'beginner'
+    intermediate: 'intermediate (B1/B2)'
+    videregående: 'intermediate (B1/B2)'
+    videregåande: 'intermediate (B1/B2)'
+    viderekommen: 'intermediate (B1/B2)'
+    b1:           'intermediate (B1/B2)'
+    b2:           'intermediate (B1/B2)'
+    advanced:     'advanced (C1/C2)'
+    avansert:     'advanced (C1/C2)'
+    c1:           'advanced (C1/C2)'
+    c2:           'advanced (C1/C2)'
     native:       'norwegian native speaker'
     norsk:        'norwegian native speaker'
-    #svensk:      'swedish native speaker'
-    #dansk:       'danish native speaker'
-    #dansker:     'danish native speaker'
+    #swedish:     'swedish speaker/native'
+    svensk:       'swedish speaker/native'
+    #danish:      'danish speaker/native'
+    dansk:        'danish speaker/native'
+    dansker:      'danish speaker/native'
+    islandsk:     'icelandic speaker/native'
+    færøysk:      'faroese speaker/native'
     nynorsk:      'nynorsk'
+    #høgnorsk:    'nynorsk'
+    #riksmål:     'bokmål'
     bokmål:       'bokmål'
-    bokmal:       'bokmål'
-    bokmaal:      'bokmål'
+    #bokmal:      'bokmål'
+    #bokmaal:     'bokmål'
+    nysgjerrig:   'non-learner (A0)'
+    curious:      'non-learner (A0)'
+    nonlearner:   'non-learner (A0)'
     #nsfw:        'nsfw'
-    comp:         'computer wannabe'
-    popcorn:      'popcorntime 🍿'
+    #comp:        'computer wannabe'
+    #data:        'it-entusiast'
+    #comp:        'it-entusiast'
+    spillglad:    'spill'
+    game:         'spill'
+    popkorn:      'popkorn 🍿 – norsk tale'
+    popcorn:      'popcorn 🍿 – english audio'
+    varsel:       'taletrengt'
+    snakkesalig:  'taletrengt'
+    taletrengt:   'taletrengt'
+    chitchat:     'taletrengt'
+    lesehest:     'lesehest'
+    'lesenhjørning': 'lesehest'
+    'leseenhjørning': 'lesehest'
+    bookworm:     'lesehest'
+    utlending:    'utlending'
+    aa:           'anonyme ansvarlige'
+    norank:       'No MEE6 ranking'
+    spammylog:    'Spammy log'
+    han:          'he/him'
+    solo:         'he/him'
+    hun:          'she/her'
+    de:           'they/them'
+    dei:          'they/them'
   :user_exclusive_roles:
-    - - 'beginner'
-      - 'intermediate'
-      - 'advanced'
+    - - 'non-learner (A0)'
+      - 'beginner (A1/A2)'
+      - 'intermediate (B1/B2)'
+      - 'advanced (C1/C2)'
       - 'norwegian native speaker'
-      - 'swedish native speaker'
-      - 'danish native speaker'
+      #- 'swedish native speaker'
+      #- 'danish native speaker'
     - - 'nynorsk'
       - 'bokmål'
       #- 'swedish native speaker' # Maybe a bit too strict.
       #- 'danish native speaker'  # Maybe a bit too strict.
+    # Maybe a bit too strict?
+    - - 'norwegian native speaker'
+      - 'swedish speaker/native'
+      - 'danish speaker/native'
+      - 'icelandic speaker/native'
+      - 'faroese speaker/native'
+
   # Shortcodes do not work. You will have to use the unicode character, '🤔' or escape the shortcode \:thinking:
   :emoji_react_channels:
-    493501920082657290: #→ suggestions
+    622159632328032306: #→ suggestions
       - ⬆
       - ⬇
       - ↕
-  # Which channels to check for activity.
-  :server_activity_channels:
-    202189706383982605: generelt #→ conversation
-    283985790290231296: lettloff #→ lettloff
-    212674987788599296: lofferundt #→ loffe_rundt
+      #- 🙂
+      #- 😦
+      #- 😐
+    # 622161063667957763: #→ name-suggestions
+    #   - ⬆
+    #   - ⬇
+    #   - ↕
 
+  :server_activity_channels:
+    # channel_id ; filename
+    #202189706383982605: generelt #→ conversation
+    622146382278557696: lettloff #→ lettloff
+    #622146199083941909: lofferundt #→ loffe_rundt
+
+  # For how long should there have been silence before the bot tries to do something.
+  # In seconds. 3600 = 1 hour (60 * 60)
+  #             7200 = 2 hours
+  :server_inactivity_time: 7200
+#
+#
+# Soon™
 #

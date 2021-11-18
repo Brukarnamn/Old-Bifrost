@@ -2,8 +2,14 @@
 
   <https://github.com/markdownlint/markdownlint/blob/master/docs/RULES.md>
 
-  Written by Noko @ NELLE Discord Server (Norwegian-English Language Learning Exchange.
-  Invite link: <https://discord.gg/deAxeZE>
+  Written by Noko🍣#1335 @ Discord <@210866460950659072>.
+
+  NOTE: Code has not been updated for Discord's changes in intent policies. Nor
+  has it been updated to reflect changes to discord.rb and Ruby 3.+ since the
+  code was originally released many years ago.
+
+  Some of the individual code might still work though, so leaving it up for
+  anyone that might happen to see it, before they gauge their eyes out.
 
 ## Bifrost / Bivrost / Bifröst / Bilröst
 
@@ -18,30 +24,11 @@ The bridge will collapse when the sons of Muspell ride it during Ragnarok.
 
 ## Some features
 
-* Change roles with !Role SHORT_ROLE_NAME command or simply !SHORT_ROLE_NAME.
-  The check for !SHORT_ROLE_NAME is done after any other normal commands.
-  SHORT_ROLE_NAME maps into FULL_ROLE_NAME based on the configuration file.
-
-* Lots of silly one-liner responses based on !SillyStuff SHORT_COMMAND
-  or simply !SHORT_COMMAND.
-  The check for !SHORT_COMMAND is done after any other normal commands,
-  and after any !SHORT_ROLE_NAME commands.
-  This can also be regexp based triggers, that will match *any* text any
-  user writes.
-
-* Output a custom message when a user join or leaves.
-  With the exception of usernames matching a customizable "URL-filter".
-
-* Output the audit log to a "primary" server channel for the Ban, Kick,
-  and MessageDelete events.
-  Output the audit log to a "secondary" server channel for the MessageDelete
-  event with more detailed information, in addition to the Avatar,
-  Username, and Nickname events.
+* ...
 
 ## To-do list
 
-* Blacklist of user-ids that will flag the moderators if any of these
-  user-id should join.
+* In progress: Rewrite the entire code.
 
 ## Known issues
 

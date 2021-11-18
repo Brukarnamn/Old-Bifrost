@@ -26,6 +26,7 @@
 #
 
 # Global variables.
+# Could have made them global inside the module instead...
 ROOT_DIR     = ''
 SCRIPT_NAME  = ''
 BOT_CONFIG   = nil
@@ -135,7 +136,8 @@ module BifrostBot
   log_file = File.new(File.expand_path(+ROOT_DIR << '/logs/' << timestamp_file << '.log'), 'a+')
   log_streams = [STDOUT, log_file]
 
-  run_supressed { LOGGER = Discordrb::LOGGER = Discordrb::Logger.new(true, log_streams) }
+  #run_supressed { LOGGER = Discordrb::LOGGER = Discordrb::Logger.new(true, log_streams) }
+  LOGGER = Discordrb::LOGGER = Discordrb::Logger.new(true, log_streams)
 
 =begin
   Attributes to initialize a normal Bot with:
@@ -241,16 +243,16 @@ module BifrostBot
     Whether the bot should ignore bot accounts or not. Default is false.
 =end
   bot_initialize_options = {
-    token:          BOT_CONFIG.client_token,
-    client_id:      BOT_CONFIG.client_id,
-    name:           'Bifrost' + (BOT_CONFIG.is_test_server ? ' Dev' : ''),
-    parse_self:     true,    # # Whether the bot should react on its own messages. Turned on so the bot will store its own responses. BE CAREFUL OF LOOPS!
-    ignore_bots:    false,   # Whether the bot should ignore bot accounts or not. Default is false.
-    fancy_log:      (BOT_CONFIG.debug ? true : false), # Whether the output log should be made extra fancy using ANSI escape codes.
-    log_mode:       :normal, # The mode this bot should use for logging.
+    token:                  BOT_CONFIG.client_token,
+    client_id:              BOT_CONFIG.client_id,
+    name:                   'Bifrost' + (BOT_CONFIG.is_test_server ? ' Dev' : ''),
+    parse_self:             true,    # Whether the bot should react on its own messages. Turned on so the bot will store its own responses. BE CAREFUL OF LOOPS!
+    ignore_bots:            false,   # Whether the bot should ignore bot accounts or not. Default is false.
+    fancy_log:              (BOT_CONFIG.debug ? true : false), # Whether the output log should be made extra fancy using ANSI escape codes.
+    log_mode:               :normal, # The mode this bot should use for logging.
 
     # https://www.rubydoc.info/gems/discordrb/Discordrb/Commands/CommandBot#initialize-instance_method
-    prefix:                 '§|§|§', # The prefix that should trigger this bot's commands, but for command bot.
+    prefix:                 '§|§|§', # The prefix that should trigger the bot's commands, but for command bot.
     spaces_allowed:         false,   # Whether spaces are allowed to occur between the prefix and the command. Default is false.
     help_command:           false,   # The name of the command that displays help. If none should be created, use false as the value.
     advanced_functionality: false,   # Whether to enable advanced functionality. Default is false.
@@ -259,16 +261,16 @@ module BifrostBot
 
   if BOT_CONFIG.debug_spammy
     # A little bit more spammy logs.
-    #bot_initialize_options[:log_mode] = :debug if BOT_CONFIG.debug_spammy
-    #bot_initialize_options[:log_mode] = :verbose if BOT_CONFIG.debug
+    bot_initialize_options[:log_mode] = :debug if BOT_CONFIG.debug_spammy
+    bot_initialize_options[:log_mode] = :verbose if BOT_CONFIG.debug
   end
 
   # Turn off warnings since we have no control over the code in Discordrb. :-(
   $VERBOSE = false
 
   # Then start Bifrost as a new command bot instance.
-  run_supressed { BOT_OBJ = Discordrb::Commands::CommandBot.new bot_initialize_options }
-  #BOT_OBJ = Discordrb::Commands::CommandBot.new bot_initialize_options
+  #run_supressed { BOT_OBJ = Discordrb::Commands::CommandBot.new bot_initialize_options }
+  BOT_OBJ = Discordrb::Commands::CommandBot.new bot_initialize_options
   #BOT_OBJ = Discordrb::Bot.new bot_initialize_options
 
   # Rate limiting.
@@ -327,11 +329,9 @@ module BifrostBot
   DICTIONARY_CACHE = DictionaryCache.new
 
   # Turn off warnings since we have no control over the code in Discordrb.
-  $VERBOSE = false
+  $VERBOSE = false if !(BOT_CONFIG.debug || BOT_CONFIG.debug_spammy)
 
   # Start the bot.
-  # If it runs as a normal bot this will make it loop.
-  # If it runs as a command bot it will not loop automatically.
   #puts BOT_OBJ.to_yaml
   BOT_OBJ.run
 

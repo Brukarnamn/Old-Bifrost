@@ -17,7 +17,7 @@ module BifrostBot
       # https://www.rubydoc.info/github/meew0/discordrb/Discordrb/Events/VoiceStateUpdateEvent
       voice_state_update do |event_obj|
         puts Debug.msg('----------VoiceStateUpdateEvent----------')
-        helper_obj = DiscordEventHelper.new event_obj
+        _helper_obj = DiscordEventHelper.new event_obj
         #Debug.pp helper_obj
 
         #return nil # Exception: #<LocalJumpError: unexpected return>

@@ -47,7 +47,7 @@ module BifrostBot
       MessageDeleteEvent,      ## This event is raised when a message is deleted in a channel.
       MessageEditEvent,        ## This event is raised when a message is edited in a channel.
       #PrivateMessageEvent,    # We already handle this in the normal MessageEvent. ## This event is raised when a private message is sent to the bot.
-      MentionEvent,            ## This event is raised when the bot is mentioned in a message.
+      #MentionEvent,           ## This event is raised when the bot is mentioned in a message.
 
       ServerMemberAddEvent,    ## This event is raised when a new user joins a server.
       ServerMemberDeleteEvent, ## This event is raised when a member leaves a server.
@@ -57,11 +57,11 @@ module BifrostBot
       UserUnbanEvent,          ## This event is raised when a user is unbanned from a server.
       ServerRoleCreateEvent,   ## This event is raised when a role is created.
       ServerRoleDeleteEvent,   ## This event is raised when a role is deleted.
-      ServerRoleUpdateEvent #,  ## This event is raised when a role is updated.
+      ServerRoleUpdateEvent,   ## This event is raised when a role is updated.
 
-      #VoiceStateUpdateEvent,   ## This event is raised when a user's voice state changes.
-      #RawEvent,                ## This event is raised for every dispatch received over the gateway, whether supported by discordrb or not.
-      #UnknownEvent             ## This event is raised for a dispatch received over the gateway that is not currently handled otherwise by discordrb.
+      VoiceStateUpdateEvent #, ## This event is raised when a user's voice state changes.
+      #RawEvent,               ## This event is raised for every dispatch received over the gateway, whether supported by discordrb or not.
+      #UnknownEvent            ## This event is raised for a dispatch received over the gateway that is not currently handled otherwise by discordrb.
     ]
     # Currently not handled. Maybe check for these at some time.
     #AwaitEvent,                  ## This event is raised when an Await is triggered. It provides an easy way to execute code on an await without having to rely on the await's block.
@@ -101,9 +101,11 @@ module BifrostBot
       member_leave:        1,
       member_update:       1,
       presence_update:     1,
+      role_update:         1,
       user_ban:            1,
       user_unban:          1,
 
+      message_delete_mod:  0,
       member_join_mod:     0,
       member_leave_mod:    0,
       member_update_mod:   0,

@@ -100,6 +100,7 @@ module BifrostBot
         #  BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, config_str)
         #end
         BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, config_str)
+        BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, config_str)
 
         #return nil # Exception: #<LocalJumpError: unexpected return>
         nil

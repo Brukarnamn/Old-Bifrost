@@ -9,6 +9,10 @@ module BifrostBot
 
     # Handle the dictionary lookup to ordbok.uib.no
     # Discordrb::Commands::CommandEvent
+    #
+    # This has been moved over to the dictionary bot, but left for historical
+    # reasons.
+    #
     module DictionaryNOUiB
       extend Discordrb::Commands::CommandContainer
 
@@ -118,7 +122,7 @@ module BifrostBot
         #puts Debug.msg("#{__FILE__},#{__LINE__}:"), Debug.pp(word_response_hash, 0, false) if BOT_CONFIG.debug #BOT_CONFIG.debug_spammy
 
         author_str = is_nynorsk ? 'Nynorskordboka' : 'Bokmålsordboka'
-        footer_str = 'Universitetet i Bergen og Språkrådet © 2018'
+        footer_str = 'Universitetet i Bergen og Språkrådet © 2020'
 
         word_count        = word_response_hash[:length]     || 0
         ordbok_url        = word_response_hash[:url]        || ''
@@ -151,6 +155,7 @@ module BifrostBot
         description_str = word_response_hash[:error] if !word_response_hash[:error].empty?
 
         ordbok_entry_hash = {
+          # rubocop:disable Layout/AlignHash
           #content: (+'**' << author_str << '**: Official spellings and inflections/conjugations/declensions:' << "\n" << ordbok_url_simple),
           content: (+'**' << author_str << '**: Official spellings and inflections: ' << ordbok_url_simple),
           description: description_str,
@@ -158,6 +163,7 @@ module BifrostBot
             text: footer_str
           },
           fields: nil
+          # rubocop:enable Layout/AlignHash
         }
 
         if !word_response_hash[:words].nil_or_empty?

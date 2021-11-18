@@ -186,6 +186,8 @@ def create_sqlite_database
     "correct"           integer     DEFAULT 0,
     "wrong"             integer     DEFAULT 0,
     "correct_streak"    integer     DEFAULT 0,
+    "highest_streak"    integer     DEFAULT 0,
+    "resets"            integer     DEFAULT 0,
     "created_at"        integer     NOT NULL,
     "updated_at"        integer
   )'
@@ -235,7 +237,7 @@ class Database
   def initialize
     # Delete the database.
     puts Debug.msg '>Deleting ' + DATABASE_FILE
-    File.unlink DATABASE_FILE
+    File.unlink DATABASE_FILE if File.exist?(DATABASE_FILE)
 
     # Create a new database and open a connection.
     @db_obj = SQLite3::Database.new(DATABASE_FILE)

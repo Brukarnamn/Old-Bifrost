@@ -186,8 +186,10 @@ module BifrostBot
       @server_id      = server_obj.id
       @server_name    = server_obj.name
 
+      # If the event_obj has a channel-object, then that can be used to determine
+      # if it is a private message by checking Discord's internal channel-types.
       #@is_private_message = false
-      @is_private_message = (@server_id.nil? || @server_id.zero? || @server_id != @bot_runs_on_server_id)
+      #@is_private_message = (@server_id.nil? || @server_id.zero? || @server_id != @bot_runs_on_server_id)
 
       #@server_info_channel_id              = BOT_CONFIG.info_channel_id
       #@server_default_channel_id           = BOT_CONFIG.default_channel_id
@@ -209,6 +211,13 @@ module BifrostBot
       @channel_id   = channel_obj.id
       @channel_name = channel_obj.name
       @channel_type = channel_obj.type
+
+      @is_private_message = if channel_obj.respond_to?('pm?')
+                              channel_obj.pm?
+                            else
+                              false
+                            end
+      #
 
       from_event_obj = nil
       user_obj = if event_obj.respond_to?('user') && !event_obj.user.nil?
@@ -318,7 +327,7 @@ module BifrostBot
 
       # https://discordapp.com/developers/docs/resources/audit-log
       @audit_action_types = {
-        server_update:             1,
+        server_update:            1,
         channel_create:           10,
         channel_update:           11,
         channel_delete:           12,
@@ -493,19 +502,19 @@ module BifrostBot
 
     def create_user_helper_obj
       single_user_data_hash = {
-        id:             @user_id,
-        username:       @user_name,
-        discriminator:  @user_discriminator,
-        distinct:       @user_distinct,
-        mention:        @user_mention,
-        avatar_id:      @user_avatar_id,
-        avatar_url:     @user_avatar_url,
-        game:           @user_game,
-        bot_account:    @user_is_bot,
+        id:            @user_id,
+        username:      @user_name,
+        discriminator: @user_discriminator,
+        distinct:      @user_distinct,
+        mention:       @user_mention,
+        avatar_id:     @user_avatar_id,
+        avatar_url:    @user_avatar_url,
+        game:          @user_game,
+        bot_account:   @user_is_bot,
 
-        nick:           @user_nick,
-        roles:          @user_roles,
-        joined_at:      @user_joined_at
+        nick:          @user_nick,
+        roles:         @user_roles,
+        joined_at:     @user_joined_at
       }
 
       # Make a new helper user object with the hash data, then return it.
@@ -540,7 +549,7 @@ module BifrostBot
 
     def user_is_bot_owner?
       return_value = false
-      return return_value if @user_id.nil? || !@user_id.positive?
+      return false if @user_id.nil? || !@user_id.positive?
 
       #Debug.pp(user: @user_id, devs: BOT_CONFIG.developer_user_ids) if BOT_CONFIG.debug_spammy
 
@@ -555,6 +564,40 @@ module BifrostBot
 
       elsif BOT_CONFIG.developer_user_ids.is_a?(Integer) # nil = NilClass
         return_value = (BOT_CONFIG.developer_user_ids == @user_id)
+      end
+
+      #return return_value
+      return_value
+    end
+
+
+
+    def user_is_roleless?
+      #Debug.pp(user: @user_id, user_roles: @user_roles) if BOT_CONFIG.debug_spammy
+      return true if @user_roles.empty?
+
+      false
+    end
+
+
+
+    def user_is_bot_impersonator?
+      return_value = false
+      return false if @user_id.nil? || !@user_id.positive?
+
+      Debug.pp(user: @user_id, imps: BOT_CONFIG.bot_impersonator_user_ids) if BOT_CONFIG.debug_spammy
+
+      if BOT_CONFIG.bot_impersonator_user_ids.is_a?(Array)
+        BOT_CONFIG.bot_impersonator_user_ids.each do |single_owner_user_id|
+          next if single_owner_user_id.nil? || !single_owner_user_id.is_a?(Integer)
+          next if single_owner_user_id != @user_id
+
+          return_value = true
+          break
+        end
+
+      elsif BOT_CONFIG.bot_impersonator_user_ids.is_a?(Integer) # nil = NilClass
+        return_value = (BOT_CONFIG.bot_impersonator_user_ids == @user_id)
       end
 
       #return return_value
@@ -585,8 +628,8 @@ module BifrostBot
 
     def user_has_one_of_these_roles?(array_of_role_ids)
       return_value = false
-      return return_value if @user_id.nil? || !@user_id.positive?
-      return return_value if @user_roles.nil? || @user_roles.empty?
+      return false if @user_id.nil? || !@user_id.positive?
+      return false if @user_roles.nil? || @user_roles.empty?
 
       #Debug.pp(user: @user_id, user_roles: @user_roles, check_against: array_of_role_ids) if BOT_CONFIG.debug_spammy
 
@@ -613,8 +656,8 @@ module BifrostBot
     # @returns [nil] if no match were found.
     # @returns [Array<Integer>] if one or more matches were found.
     def server_role_name_to_role_ids(server_role_name)
-      #Debug.pp BOT_CACHE.role_ids
-      #Debug.pp BOT_CACHE.role_names
+      Debug.pp BOT_CACHE.role_ids
+      Debug.pp BOT_CACHE.role_names
       server_role_ids = []
 
       # Loop over all the server roles in the Cache.
@@ -648,6 +691,7 @@ module BifrostBot
 
       # Make sure the cached list of server roles are up-to-date.
       #BOT_CACHE.update_roles_cache
+      ap BOT_CACHE
 
       # Check if the permission role exist on the server.
       # A bug somewhere? Spelling error in the configuration file?
@@ -863,6 +907,7 @@ module BifrostBot
 
     # https://leovoel.github.io/embed-visualizer/
     def create_discord_embed(embed_data_hash)
+      # rubocop:disable Layout/AlignHash
       defaults = {
         # Normal text at the start before the actual embed.
         # Supports the following subset of markdown.
@@ -927,6 +972,7 @@ module BifrostBot
         #    inline: false
         #  }
         ]
+        # rubocop:enable Layout/AlignHash
       }
       embed_data_hash = defaults.merge(embed_data_hash)
       #puts Debug.msg("#{__FILE__},#{__LINE__}:"), Debug.pp(embed_data_hash, 0, false) if BOT_CONFIG.debug_spammy
@@ -1328,19 +1374,19 @@ module BifrostBot
         #Debug.pp audit_entry
 
         audit_log_data_hash = {
-          audit_id:        audit_entry[:id],
-          action_type:     audit_entry[:action],
-          server_id:       @server_id,
-          channel_id:      channel_id, # This will be wrong until the database is properly updated.  Or until Discord provides it in a proper way.
-          message_id:      message_id, # This will be wrong until the database is properly updated.  Or until Discord provides it in a proper way.
-          repeat_count:    audit_entry[:count],
-          changes:         nil,
-          reason:          audit_entry[:reason],
-          target_type:     audit_entry[:target_type].to_s,
-          target_id:       audit_entry[:target_id],
-          user_id:         audit_entry[:user_id],
-          created_at:      audit_entry[:creation_time],
-          edited_at:       utc_time_stamp
+          audit_id:     audit_entry[:id],
+          action_type:  audit_entry[:action],
+          server_id:    @server_id,
+          channel_id:   channel_id, # This will be wrong until the database is properly updated.  Or until Discord provides it in a proper way.
+          message_id:   message_id, # This will be wrong until the database is properly updated.  Or until Discord provides it in a proper way.
+          repeat_count: audit_entry[:count],
+          changes:      nil,
+          reason:       audit_entry[:reason],
+          target_type:  audit_entry[:target_type].to_s,
+          target_id:    audit_entry[:target_id],
+          user_id:      audit_entry[:user_id],
+          created_at:   audit_entry[:creation_time],
+          edited_at:    utc_time_stamp
         }
 
         # If the log entry doesn't exist, then it is created with the given data.
@@ -1390,19 +1436,19 @@ module BifrostBot
         #Debug.pp audit_entry
 
         audit_log_data_hash = {
-          audit_id:        audit_entry[:id],
-          action_type:     audit_entry[:action],
-          server_id:       @server_id,
-          channel_id:      nil,
-          message_id:      nil,
-          repeat_count:    audit_entry[:count],
-          changes:         nil,
-          reason:          audit_entry[:reason],
-          target_type:     audit_entry[:target_type].to_s,
-          target_id:       audit_entry[:target_id],
-          user_id:         audit_entry[:user_id],
-          created_at:      audit_entry[:creation_time],
-          edited_at:       utc_time_stamp
+          audit_id:     audit_entry[:id],
+          action_type:  audit_entry[:action],
+          server_id:    @server_id,
+          channel_id:   nil,
+          message_id:   nil,
+          repeat_count: audit_entry[:count],
+          changes:      nil,
+          reason:       audit_entry[:reason],
+          target_type:  audit_entry[:target_type].to_s,
+          target_id:    audit_entry[:target_id],
+          user_id:      audit_entry[:user_id],
+          created_at:   audit_entry[:creation_time],
+          edited_at:    utc_time_stamp
         }
 
         # If the log entry doesn't exist, then it is created with the given data.
@@ -1449,19 +1495,19 @@ module BifrostBot
         #Debug.pp audit_entry
 
         audit_log_data_hash = {
-          audit_id:        audit_entry[:id],
-          action_type:     audit_entry[:action],
-          server_id:       @server_id,
-          channel_id:      nil,
-          message_id:      nil,
-          repeat_count:    audit_entry[:count],
-          changes:         nil,
-          reason:          audit_entry[:reason],
-          target_type:     audit_entry[:target_type].to_s,
-          target_id:       audit_entry[:target_id],
-          user_id:         audit_entry[:user_id],
-          created_at:      audit_entry[:creation_time],
-          edited_at:       utc_time_stamp
+          audit_id:     audit_entry[:id],
+          action_type:  audit_entry[:action],
+          server_id:    @server_id,
+          channel_id:   nil,
+          message_id:   nil,
+          repeat_count: audit_entry[:count],
+          changes:      nil,
+          reason:       audit_entry[:reason],
+          target_type:  audit_entry[:target_type].to_s,
+          target_id:    audit_entry[:target_id],
+          user_id:      audit_entry[:user_id],
+          created_at:   audit_entry[:creation_time],
+          edited_at:    utc_time_stamp
         }
 
         # If the log entry doesn't exist, then it is created with the given data.
@@ -1508,19 +1554,19 @@ module BifrostBot
         #Debug.pp audit_entry
 
         audit_log_data_hash = {
-          audit_id:        audit_entry[:id],
-          action_type:     audit_entry[:action],
-          server_id:       @server_id,
-          channel_id:      nil,
-          message_id:      nil,
-          repeat_count:    audit_entry[:count],
-          changes:         nil,
-          reason:          audit_entry[:reason],
-          target_type:     audit_entry[:target_type].to_s,
-          target_id:       audit_entry[:target_id],
-          user_id:         audit_entry[:user_id],
-          created_at:      audit_entry[:creation_time],
-          edited_at:       utc_time_stamp
+          audit_id:     audit_entry[:id],
+          action_type:  audit_entry[:action],
+          server_id:    @server_id,
+          channel_id:   nil,
+          message_id:   nil,
+          repeat_count: audit_entry[:count],
+          changes:      nil,
+          reason:       audit_entry[:reason],
+          target_type:  audit_entry[:target_type].to_s,
+          target_id:    audit_entry[:target_id],
+          user_id:      audit_entry[:user_id],
+          created_at:   audit_entry[:creation_time],
+          edited_at:    utc_time_stamp
         }
 
         # If the log entry doesn't exist, then it is created with the given data.
@@ -1571,19 +1617,19 @@ module BifrostBot
         change_str = 'NICK|→' + audit_entry_nick + '←|'
 
         audit_log_data_hash = {
-          audit_id:        audit_entry[:id],
-          action_type:     audit_entry[:action],
-          server_id:       @server_id,
-          channel_id:      nil,
-          message_id:      nil,
-          repeat_count:    audit_entry[:count],
-          changes:         change_str,
-          reason:          audit_entry[:reason],
-          target_type:     audit_entry[:target_type].to_s,
-          target_id:       audit_entry[:target_id],
-          user_id:         audit_entry[:user_id],
-          created_at:      audit_entry[:creation_time],
-          edited_at:       utc_time_stamp
+          audit_id:     audit_entry[:id],
+          action_type:  audit_entry[:action],
+          server_id:    @server_id,
+          channel_id:   nil,
+          message_id:   nil,
+          repeat_count: audit_entry[:count],
+          changes:      change_str,
+          reason:       audit_entry[:reason],
+          target_type:  audit_entry[:target_type].to_s,
+          target_id:    audit_entry[:target_id],
+          user_id:      audit_entry[:user_id],
+          created_at:   audit_entry[:creation_time],
+          edited_at:    utc_time_stamp
         }
 
         # If the log entry doesn't exist, then it is created with the given data.

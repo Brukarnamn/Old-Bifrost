@@ -26,109 +26,18 @@
 # If TIME is 0 or nil it will be shown for the default time, in seconds.
 # if TIME is 0 less it will be permanent.
 #
+# engelsk: “ ”
+# norsk:   « ‘ ’ »
+# kort –  lang —  tre …  gås « ‘ ’ » “ ”
+#
 ---
 :bot_silly_texts:
 
   ################################################################################
   # Specific users:
 
-  Alpha:
-    :text: "**Alpha**#3914 is **Cecilie**#6438's bot."
-
-  Andrew:
-    #:text: All hail Andrew the Server!
-    :text: Did someone mention rocks?
-
-  Andrish:
-    # B WEAK AND CHEAP B
-    :text: ':b:   :regional_indicator_w: :regional_indicator_e: :regional_indicator_a: :regional_indicator_k:   :regional_indicator_a: :regional_indicator_n: :regional_indicator_d:   :regional_indicator_c: :regional_indicator_h: :regional_indicator_e: :regional_indicator_a: :regional_indicator_p:   :b:'
-
-  Babs:
-    :text: peach out Jonny
-    #:text: haha is gay, peach out Jonny
-
-  Bagett:
-    :text: 'Welcome to ENLE. Please enjoy your stay and happy learning. :gay_pride_flag:'
-    :time: -1
-
-  Britta:
-    #:text: ':snowflake: :crown:'
-
-  # Cecilie
-  Ceci:
-    #:text: 'I :hearts: warm weather, cheese, wine and Friskis!'
-    :text: '**Cecilie**#6438 is an advanced artifical intelligent being that loves warm weather, cheese, wine and Friskis!'
-
-  Chi:
-    :text: "You said Chi?  Facts: **1)** Kind.  **2)** Can cook.  **3)** Has your mom's phone number. :iphone:"
-
-  Chilie:
-    #:text: "Cecilie is married to Chi. Her other personality, Dove, is married to Britta and Vestan, and Albert is Dove's boyfriend. Cecilie has Alpha and Andrew as slaves. Elgen is their partysvenske slave. Cecilie is Sudo's property. Pony and Peepee are her dearest pets, while Send_Noots is Chi's pet. Bear is their uncontrollable pet. Dove has a side chick that’s unknown and Andrish is Dove's Duddo."
-    #:time: 600
-    :text: Cecilie is married to Chi. The rest is history. *Insert history here*.
-
-  Dookie:
-    #:text: '**dookie**#3230 wants to travel to Kjeragbolten and take a picture.'
-
-  Dove:
-    :text: 'I :hearts: my :rabbit2: Fluffybunny :whale:'
-
-  Elg:
-    #:text: 'Ug doot :deer:'
-
-  Noko:
-    :text: '**Noko**☕#1335 is a bot made by **sudo**#4043 and **Andrishh**#0990.'
-
-  Sudo:
-    #:text: '**sudo**#4043 is a bot made by **dookie**#3230, not **Andrishh**#0990.'
-    #:text: '**¡ S T O R Y T I M E !** by **sudo**#4043 (in Voice Chat?)'
-    :text: '**¡ S T O R Y T I M E !**'
-
-  # Sudo's story about why he has poop brown role.
-  Sudorole:
-    :text: https://discordapp.com/channels/202189706383982605/202189706383982605/508762141046603808
-
-  # Panini
-  Pani:
-    #:aliases: Panini
-    #:text: ''
-
-  Peepy:
-    :text: ':sheep: :dragon:'
-
-  Pony:
-    :text: ':robot: :horse:'
-
-  Real:
-    :text: 'Ja, no Germans here. Only :pineapple: :pizza: & :sushi:. Gnihi.'
-
-  # Severen
-  Sev:
-    #:aliases: Severen
-    :text: '**severen**#9528 is a Swedish spy :spy: and the result of a machine learning algorithm.'
-
-  Vestan:
-    #:text: ':flag_it: :cheese: :wine_glass:'
-
   ################################################################################
   # Not related to users, but what might be talked about or said in chat.
-
-  Film:
-    :text: I'm bored. Anyone want to watch a film at https://www.rabb.it/nokoanna ?
-    :time: 600
-
-  #Mario Kart
-  Mk:
-    #:text: '`mk` is Mario Kart™. The game where (almost) everybody can be better than **sudo**#4043.'
-    :text:
-    - I'm bored. Anyone want to play Mario Kart™ ?
-    - Mario Kart™ – The game where (almost) everybody can be better than **sudo**#4043.
-    :time: 600
-
-  #Tilt controls
-  Tilt:
-    :regexp: TtEeSsTtT MEG
-    :text: I'm using tilt controls!
 
   Old: &OLD
     #:aliases: Ancient
@@ -143,3 +52,32 @@
     #:text: You should become a Burrito.
     #:text: Burrito now!
     :text: Burrito time!
+
+  Cefr:
+    :text: https://en.wikipedia.org/wiki/Common_European_Framework_of_Reference_for_Languages#Common_reference_levels
+    :time: -1
+
+  Cefrtest:
+    :aliases: languagetest norsktest testtest leveltest
+    :text:
+      - https://www.folkeuniversitetet.no/eng/Artikler/Spraaktester/Placement-test
+    :time: -1
+
+# In messages it needs to be <:emoji_name:emoji_id>
+# In reactions it needs to only be emoji_name:emoji_id
+  Kick:
+    :aliases: Ban Permaban #Kick
+    #:text: Invalid syntax. In addition this incident has been reported.
+    :text: '<@&622142742478323727>, a request for you :point_up: '
+    :time: -1
+
+  Moderator:
+    :aliases: Mod Unmod Administrator Admin
+    #:text: Invalid syntax. In addition this incident has been reported.
+    :text: '<@&622142742478323727>, a request for you :point_up: '
+    :time: -1
+
+  Roles:
+    :aliases: AddRole RemoveRole DeleteRole DelRole JoinRole LeaveRole Command
+    :text: Use the `!role` command to see all possible role options, or `!role <rolename>` to add/remove a role, or use the direct shortcut command. Or look in the <#622548699683356672> channel, or ask someone in chat!
+    :time: 300

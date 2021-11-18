@@ -20,6 +20,7 @@ module BifrostBot
         helper_obj = DiscordEventHelper.new event_obj
         #Debug.pp helper_obj
 
+=begin
         # Ignore the bot's own messages and any other bots to avoid endless loops.
         if !helper_obj.user_is_bot
           #config_str = helper_obj.user_mention + ', er det noe jeg kan hjelpe deg med?'
@@ -28,6 +29,7 @@ module BifrostBot
 
           event_obj.respond config_str
         end
+=end
 
         #return nil # Exception: #<LocalJumpError: unexpected return>
         nil

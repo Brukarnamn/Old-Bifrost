@@ -66,7 +66,8 @@ module BifrostBot
 
         # Show the answer if it is not a private message, and the supplied argument equals the questions little cheat code
         if !helper_obj.is_private_message && last_activity_obj.check_answer_code(helper_obj.uc_command_args_str)
-          event_obj.respond answer_str
+          response_str = +'||' << answer_str << '||'
+          event_obj.respond response_str
 
           return nil
         end
@@ -118,7 +119,7 @@ module BifrostBot
         return nil if last_server_activity_time + server_inactivity_time > current_time_utc
 
         # Check if it inside the time interval where the bot should do anything.
-        # To avoid possibly creating a lot of stuff happening when most are asleep anyway.
+        # To avoid possibly creating a lot of stuff happening when most users (or maybe mods?) are asleep anyway.
         current_hour_minute = current_time_utc.strftime(BOT_CONFIG.timestamp_format_hmsms)
         interval_start = BOT_CONFIG.server_time_interval_start
         interval_end   = BOT_CONFIG.server_time_interval_end
@@ -129,8 +130,10 @@ module BifrostBot
         # Then flip them around and change the logic tests accordingly.
         if interval_start < interval_end
           # Accept between f.ex. '02:00:00' and '24:00:00', otherwise return.
-          puts current_hour_minute < interval_start
-          puts current_hour_minute > interval_end
+
+          #puts current_hour_minute < interval_start
+          #puts current_hour_minute > interval_end
+          Debug.pp('cur<start': current_hour_minute < interval_start, 'cur>end': current_hour_minute > interval_end, outside: (current_hour_minute < interval_start || current_hour_minute > interval_end)) #if BOT_CONFIG.debug_spammy
 
           outside_accepted_time_interval = (current_hour_minute < interval_start || current_hour_minute > interval_end)
         else
@@ -140,22 +143,37 @@ module BifrostBot
           interval_start = interval_end
           interval_end   = temp_time_start
 
-          puts current_hour_minute < interval_start
-          puts current_hour_minute > interval_end
-          puts !(current_hour_minute < interval_start || current_hour_minute > interval_end)
+          #puts current_hour_minute < interval_start
+          #puts current_hour_minute > interval_end
+          #puts !(current_hour_minute < interval_start || current_hour_minute > interval_end)
+          Debug.pp('cur<start': current_hour_minute < interval_start, 'cur>end': current_hour_minute > interval_end, outside: !(current_hour_minute < interval_start || current_hour_minute > interval_end)) #if BOT_CONFIG.debug_spammy
 
           outside_accepted_time_interval = !(current_hour_minute < interval_start || current_hour_minute > interval_end)
         end
         return nil if outside_accepted_time_interval
 
-        last_activity_obj = BOT_CACHE.last_activity_question(server_id)
+        # Update that the last activity was now to prevent if from do the same stuff
+        # if nobody else did anything.
+        BOT_CACHE.update_last_activity(server_id, BOT_CONFIG.client_id)
 
-        # Find out which channel to post to.
-        possible_output_channels = BOT_CONFIG.server_activity_channels.keys
+        # Fetch the information about the last activity, if anything exists.
+        last_activity_obj = BOT_CACHE.last_activity_question(server_id)
         last_channel_id = last_activity_obj.channel_id if !last_activity_obj.nil?
-        #Debug.pp(hash: BOT_CONFIG.server_activity_channels, all_keys: possible_output_channels, last: last_channel_id) if BOT_CONFIG.debug_spammy
+
+        # Do stuff to find out which channel to post to.
+        # Remove the last used channel to alternate between them all.
+        # Also remove channels that don't have any text, but are added to check for activity.
+        possible_output_channels = BOT_CONFIG.server_activity_channels.dup
 
         possible_output_channels.delete(last_channel_id)
+
+        possible_output_channels.each_key do |channel_id|
+          #puts channel_id, possible_output_channels[channel_id]
+          possible_output_channels.delete(channel_id) if possible_output_channels[channel_id].nil?
+        end
+
+        possible_output_channels = possible_output_channels.keys
+        Debug.pp(hash: BOT_CONFIG.server_activity_channels, all_keys: possible_output_channels, last: last_channel_id) if BOT_CONFIG.debug_spammy
 
         # Pick a random number number from between 1..arraylength
         # and use this number as index in the channel-id array to
@@ -169,9 +187,6 @@ module BifrostBot
         #
         #Debug.pp(keys_left: possible_output_channels, picked: selected_channel_id) if BOT_CONFIG.debug_spammy
 
-        # Update that the last activity was now to prevent if from do the same stuff
-        # if nobody else did anything.
-        BOT_CACHE.update_last_activity(server_id, BOT_CONFIG.client_id)
 
         # Default text to use if the rest of the stuff fails.
         default_str = +'Insert random text here, sent to channel-id: ' << selected_channel_id.to_s << ".\n" \

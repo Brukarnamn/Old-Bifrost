@@ -28,7 +28,7 @@ module BifrostBot
 
         BOT_CACHE.remove_user_ban(server_id, target_id)
 
-        #     :audit_id => 500120473875513344,
+        #     :audit_id => 876543210987654321,
         #  :action_type => 23,
         #    :server_id => 123456789012345678,
         #   :channel_id => nil,
@@ -58,6 +58,7 @@ module BifrostBot
         config_str = helper_obj.substitute_event_vars(config_str, moduser_short_str)
 
         BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, config_str)
+        BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, config_str)
 
         #return nil # Exception: #<LocalJumpError: unexpected return>
         nil

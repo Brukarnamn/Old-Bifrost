@@ -17,7 +17,7 @@ module BifrostBot
       # https://www.rubydoc.info/github/meew0/discordrb/Discordrb/Events/ServerRoleUpdateEvent
       server_role_update do |event_obj|
         #puts Debug.msg('----------ServerRoleUpdateEvent----------')
-        #helper_obj = DiscordEventHelper.new event_obj
+        helper_obj = DiscordEventHelper.new event_obj
         #Debug.pp helper_obj
 
         #ap event_obj.role
@@ -32,6 +32,11 @@ module BifrostBot
 
         #Debug.pp BOT_CACHE.role_ids
         #Debug.pp BOT_CACHE.role_names
+
+        config_str = BOT_CONFIG.bot_event_responses[:role_update]
+        config_str = helper_obj.substitute_event_vars(config_str, event_obj.role.name)
+
+        BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, config_str)
 
         #return nil # Exception: #<LocalJumpError: unexpected return>
         nil

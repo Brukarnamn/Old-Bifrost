@@ -115,11 +115,12 @@ module BifrostBot
 
       emoji_react_channels
 
-      discord_audit_log_max_time
-      user_ban_show_messages_count
+      voice_chat_ping_counters
+      voice_chat_rejoin_delay
 
       bot_runs_on_server_id
       bot_startup_time
+      bot_identity
       bot_is_playing_game
       bot_invoke_character
       bot_valid_command_characters
@@ -154,10 +155,20 @@ module BifrostBot
       bot_invokes_time_frame_period_exercise
 
       illegal_usernames
+      illegal_messages
+      illegal_messages_roleless
       moderator_ping
       developer_user_ids
+      bot_impersonator_user_ids
+      bot_impersonator_in_channel
       moderator_role_ids
       contributor_role_ids
+      bot_text_input_echo_channels
+
+      discord_audit_log_max_time
+      user_ban_show_messages_count
+      deleted_messages_timeout
+      deleted_messages_purge_time
 
       wkhtmltoimage_exe_path
       ordbok_dictionary_css_file_path
@@ -266,11 +277,12 @@ module BifrostBot
 
         emoji_react_channels
 
-        discord_audit_log_max_time
-        user_ban_show_messages_count
+        voice_chat_ping_counters
+        voice_chat_rejoin_delay
 
         bot_runs_on_server_id
         bot_startup_time
+        bot_identity
         bot_is_playing_game
         bot_invoke_character
         bot_valid_command_characters
@@ -305,10 +317,20 @@ module BifrostBot
         bot_invokes_time_frame_period_exercise
 
         illegal_usernames
+        illegal_messages
+        illegal_messages_roleless
         moderator_ping
         developer_user_ids
+        bot_impersonator_user_ids
+        bot_impersonator_in_channel
         moderator_role_ids
         contributor_role_ids
+        bot_text_input_echo_channels
+
+        discord_audit_log_max_time
+        user_ban_show_messages_count
+        deleted_messages_timeout
+        deleted_messages_purge_time
 
         wkhtmltoimage_exe_path
         ordbok_dictionary_css_file_path
@@ -359,9 +381,9 @@ module BifrostBot
 
     public
 
-    # Creates a new Config object.
+    # Create a new Config object.
     #
-    # @param command_line_args [Array] The command line arguments, ARGV.
+    # @param command_line_args [Array] The shell command line arguments, ARGV.
     # @return [#<BifrostBot::Config>]
     #
     def initialize(command_line_args)
@@ -402,65 +424,66 @@ module BifrostBot
       # The valid keys that should only be filled out in the secrets.yml file.
       # Give a warning if an actual value is set in the normal config file.
       @valid_keys_only_in_secrets_file = {
-        CLIENT_ID:          ['client_id',          -1],
-        CLIENT_SECRET:      ['client_secret',      ''],
-        TOKEN:              ['client_token',       ''],
-        DATABASE_USERNAME:  ['database_username',  ''],
-        DATABASE_PASSWORD:  ['database_password',  '']
+        CLIENT_ID:         ['client_id',          -1],
+        CLIENT_SECRET:     ['client_secret',      ''],
+        TOKEN:             ['client_token',       ''],
+        DATABASE_USERNAME: ['database_username',  ''],
+        DATABASE_PASSWORD: ['database_password',  '']
       }
 
       # The valid keys that can be in the config file.
       # Followed by an array of the internal class method to read/write and its default initial value.
-      # - The KEY is the keyword that is used in the configuration file.
+      # - The KEY (in uppercase) is the keyword that is used in the configuration file.
       # - The value is the internal configuration variable used in the code, and its default value.
       @valid_keys = {
-        DATABASE_ENGINE:    ['database_engine',    'sqlite'],                  # rubocop:disable Style/WordArray
-        DATABASE_FILE_NAME: ['database_file_name', 'data/server_data.sqlite'], #
-        DATABASE_PORT:      ['database_port',      ''],
+        DATABASE_ENGINE:                                    ['database_engine',    'sqlite'],                  # rubocop:disable Style/WordArray
+        DATABASE_FILE_NAME:                                 ['database_file_name', 'data/server_data.sqlite'], #
+        DATABASE_PORT:                                      ['database_port',      ''],
 
-        CLIENT_ID:          ['client_id',          -1],
-        CLIENT_SECRET:      ['client_secret',      ''],
-        TOKEN:              ['client_token',       ''],
-        DATABASE_USERNAME:  ['database_username',  ''],
-        DATABASE_PASSWORD:  ['database_password',  ''],
+        CLIENT_ID:                                          ['client_id',          -1],
+        CLIENT_SECRET:                                      ['client_secret',      ''],
+        TOKEN:                                              ['client_token',       ''],
+        DATABASE_USERNAME:                                  ['database_username',  ''],
+        DATABASE_PASSWORD:                                  ['database_password',  ''],
 
-        TEST_SERVER_ID:     ['test_server_id',     -1],
-        LIVE_SERVER_ID:     ['live_server_id',     -1],
+        TEST_SERVER_ID:                                     ['test_server_id',     -1],
+        LIVE_SERVER_ID:                                     ['live_server_id',     -1],
 
-        INFO_CHANNEL_ID:                 ['info_channel_id',                      -1],
-        DEFAULT_CHANNEL_ID:              ['default_channel_id',                   -1],
-        ROLE_SPAM_CHANNEL_ID:            ['role_spam_channel_id',                 -1],
-        GENERIC_SPAM_CHANNEL_ID:         ['generic_spam_channel_id',              -1],
-        AUDIT_SPAM_MOD_CHANNEL_ID:       ['audit_spam_mod_channel_id',            -1],
-        AUDIT_SPAM_PUBLIC_CHANNEL_ID:    ['audit_spam_public_channel_id',         -1],
-        EXERCISES_CHANNEL_ID:            ['exercises_channel_id',                 -1],
+        INFO_CHANNEL_ID:                                    ['info_channel_id',                      -1],
+        DEFAULT_CHANNEL_ID:                                 ['default_channel_id',                   -1],
+        ROLE_SPAM_CHANNEL_ID:                               ['role_spam_channel_id',                 -1],
+        GENERIC_SPAM_CHANNEL_ID:                            ['generic_spam_channel_id',              -1],
+        AUDIT_SPAM_MOD_CHANNEL_ID:                          ['audit_spam_mod_channel_id',            -1],
+        AUDIT_SPAM_PUBLIC_CHANNEL_ID:                       ['audit_spam_public_channel_id',         -1],
+        EXERCISES_CHANNEL_ID:                               ['exercises_channel_id',                 -1],
 
-        EMOJI_REACT_CHANNELS:            ['emoji_react_channels',                 {}],
+        EMOJI_REACT_CHANNELS:                               ['emoji_react_channels',                 {}],
 
-        DISCORD_AUDIT_LOG_MAX_TIME:      ['discord_audit_log_max_time',           900],
-        USER_BAN_SHOW_MESSAGES_COUNT:    ['user_ban_show_messages_count',         0],
+        VOICE_CHAT_PING_COUNTERS:                           ['voice_chat_ping_counters',             {}],
+        VOICE_CHAT_REJOIN_DELAY:                            ['voice_chat_rejoin_delay',              60],
 
-        BOT_RUNS_ON_SERVER_ID:           ['bot_runs_on_server_id',                -1],
-        BOT_STARTUP_TIME:                ['bot_startup_time',                     Time.now.utc],
-        BOT_IS_PLAYING_GAME:             ['bot_is_playing_game',                  "I don't know what I'm doing", nil],
+        BOT_RUNS_ON_SERVER_ID:                              ['bot_runs_on_server_id',                -1],
+        BOT_STARTUP_TIME:                                   ['bot_startup_time',                     Time.now.utc],
+        BOT_IDENTITY:                                       ['bot_identity',                         ''],
+        BOT_IS_PLAYING_GAME:                                ['bot_is_playing_game',                  "I don't know what I'm doing", nil],
 
-        BOT_INVOKE_CHARACTER:            ['bot_invoke_character',                 '!'],
-        BOT_VALID_COMMAND_CHARACTERS:    ['bot_valid_command_characters',         '[a-zA-Z]+'],
-        BOT_VALID_COMMAND_EMOJI:         ['bot_valid_command_emoji',              ''],
-        BOT_SYSTEM_CODE:                 ['bot_system_code',                      ''],
+        BOT_INVOKE_CHARACTER:                               ['bot_invoke_character',                 '!'],
+        BOT_VALID_COMMAND_CHARACTERS:                       ['bot_valid_command_characters',         '[a-zA-Z]+'],
+        BOT_VALID_COMMAND_EMOJI:                            ['bot_valid_command_emoji',              ''],
+        BOT_SYSTEM_CODE:                                    ['bot_system_code',                      ''],
         # 0xa84300  0x973c00  0x863500  0x752e00  0x642800  0x542100  0x431a00  0x321400  0x210d00  0x100600  0x000000
-        BOT_TEXT_EMBED_COLOR:            ['bot_text_embed_color',                 '0x0000ff'], # rubocop:disable Style/WordArray
-        BOT_URL:                         ['bot_url',                              ''],
-        BOT_COMMAND_TEXTS_FOLDER:        ['bot_command_texts_folder',             ''],
-        BOT_EVENT_RESPONSES:             ['bot_event_responses',                  {}],
-        BOT_SILLY_TEXTS:                 ['bot_silly_texts',                      {}],
-        BOT_TEXTS_FOLDER:                ['bot_texts_folder',                     ''],
-        BOT_TEXTS:                       ['bot_texts',                            {}],
-        BOT_INACTIVITY_FOLDER:           ['bot_inactivity_folder',                {}],
-        BOT_INACTIVITY_MESSAGES:         ['bot_inactivity_messages',              {}],
-        BOT_EXERCISES_FOLDER:            ['bot_exercises_folder',                 {}],
-        BOT_EXERCISES:                   ['bot_exercises',                        {}],
-        BOT_SILLY_COMMAND_DEFAULT_TIMEOUT: ['bot_silly_command_default_timeout',  120],
+        BOT_TEXT_EMBED_COLOR:                               ['bot_text_embed_color',                 '0x0000ff'], # rubocop:disable Style/WordArray
+        BOT_URL:                                            ['bot_url',                              ''],
+        BOT_COMMAND_TEXTS_FOLDER:                           ['bot_command_texts_folder',             ''],
+        BOT_EVENT_RESPONSES:                                ['bot_event_responses',                  {}],
+        BOT_SILLY_TEXTS:                                    ['bot_silly_texts',                      {}],
+        BOT_TEXTS_FOLDER:                                   ['bot_texts_folder',                     ''],
+        BOT_TEXTS:                                          ['bot_texts',                            {}],
+        BOT_INACTIVITY_FOLDER:                              ['bot_inactivity_folder',                {}],
+        BOT_INACTIVITY_MESSAGES:                            ['bot_inactivity_messages',              {}],
+        BOT_EXERCISES_FOLDER:                               ['bot_exercises_folder',                 {}],
+        BOT_EXERCISES:                                      ['bot_exercises',                        {}],
+        BOT_SILLY_COMMAND_DEFAULT_TIMEOUT:                  ['bot_silly_command_default_timeout',    120],
 
         USER_MAX_BOT_INVOKES_PER_TIME_LIMIT:                ['user_max_bot_invokes_per_time_limit',                5],
         USER_BOT_INVOKES_MINIMUM_TIME_FRAME_LIMIT:          ['user_bot_invokes_minimum_time_frame_limit',          1],
@@ -472,28 +495,38 @@ module BifrostBot
         USER_BOT_INVOKES_MINIMUM_TIME_FRAME_LIMIT_EXERCISE: ['user_bot_invokes_minimum_time_frame_limit_exercise', 3],
         BOT_INVOKES_TIME_FRAME_PERIOD_EXERCISE:             ['bot_invokes_time_frame_period_exercise',             9],
 
-        ILLEGAL_USERNAMES:               ['illegal_usernames',                    []],
-        MODERATOR_PING:                  ['moderator_ping',                       ''],
-        DEVELOPER_USER_IDS:              ['developer_user_ids',                   []],
-        MODERATOR_ROLE_IDS:              ['moderator_role_ids',                   []],
-        CONTRIBUTOR_ROLE_IDS:            ['contributor_role_ids',                 []],
+        ILLEGAL_USERNAMES:                                  ['illegal_usernames',                    []],
+        ILLEGAL_MESSAGES:                                   ['illegal_messages',                     []],
+        ILLEGAL_MESSAGES_ROLELESS:                          ['illegal_messages_roleless',            []],
+        MODERATOR_PING:                                     ['moderator_ping',                       ''],
+        DEVELOPER_USER_IDS:                                 ['developer_user_ids',                   []],
+        BOT_IMPERSONATOR_USER_IDS:                          ['bot_impersonator_user_ids',            []],
+        BOT_IMPERSONATOR_IN_CHANNEL:                        ['bot_impersonator_in_channel',          nil],
+        MODERATOR_ROLE_IDS:                                 ['moderator_role_ids',                   []],
+        CONTRIBUTOR_ROLE_IDS:                               ['contributor_role_ids',                 []],
+        BOT_TEXT_INPUT_ECHO_CHANNELS:                       ['bot_text_input_echo_channels',         []],
 
-        WKHTMLTOIMAGE_EXE_PATH:          ['wkhtmltoimage_exe_path',               ''],
-        ORDBOK_DICTIONARY_CSS_FILE_PATH: ['ordbok_dictionary_css_file_path',      ''],
-        ORDBOK_DICTIONARY_CSS:           ['ordbok_dictionary_css',                ''],
-        WORD_INFLECTION_IMAGE_FOLDER:    ['word_inflection_image_folder',         ''],
-        ILLEGAL_DICTIONARY_SEARCH_CHARACTERS: ['illegal_dictionary_search_characters', '[^ \.\-A-Za-z0-9]'],
-        MAX_DICTIONARY_RESULTS_TO_SHOW:  ['max_dictionary_results_to_show',       5],
+        DISCORD_AUDIT_LOG_MAX_TIME:                         ['discord_audit_log_max_time',           900],
+        USER_BAN_SHOW_MESSAGES_COUNT:                       ['user_ban_show_messages_count',         0],
+        DELETED_MESSAGES_TIMEOUT:                           ['deleted_messages_timeout',             -1],
+        DELETED_MESSAGES_PURGE_TIME:                        ['deleted_messages_purge_time',          '00:00:00'],
 
-        SERVER_ACTIVITY_CHANNELS:        ['server_activity_channels',             {}],
-        SERVER_INACTIVITY_TIME:          ['server_inactivity_time',               3600], # 1 hour (60 * 60)
-        SERVER_TIME_INTERVAL_START:      ['server_time_interval_start',           '00:00:00'],
-        SERVER_TIME_INTERVAL_END:        ['server_time_interval_end',             '00:00:00'],
+        WKHTMLTOIMAGE_EXE_PATH:                             ['wkhtmltoimage_exe_path',               ''],
+        ORDBOK_DICTIONARY_CSS_FILE_PATH:                    ['ordbok_dictionary_css_file_path',      ''],
+        ORDBOK_DICTIONARY_CSS:                              ['ordbok_dictionary_css',                ''],
+        WORD_INFLECTION_IMAGE_FOLDER:                       ['word_inflection_image_folder',         ''],
+        ILLEGAL_DICTIONARY_SEARCH_CHARACTERS:               ['illegal_dictionary_search_characters', '[^ \.\-A-Za-z0-9]'],
+        MAX_DICTIONARY_RESULTS_TO_SHOW:                     ['max_dictionary_results_to_show',       5],
 
-        USER_ROLE_COMMANDS:              ['user_role_commands',                   []],
-        USER_EXCLUSIVE_ROLES:            ['user_exclusive_roles',                 {}],
-        UC_USER_ROLE_COMMANDS:           ['uc_user_role_commands',                []],
-        UC_USER_EXCLUSIVE_ROLES:         ['uc_user_exclusive_roles',              {}]
+        SERVER_ACTIVITY_CHANNELS:                           ['server_activity_channels',             {}],
+        SERVER_INACTIVITY_TIME:                             ['server_inactivity_time',               3600], # 1 hour (60 * 60)
+        SERVER_TIME_INTERVAL_START:                         ['server_time_interval_start',           '00:00:00'],
+        SERVER_TIME_INTERVAL_END:                           ['server_time_interval_end',             '00:00:00'],
+
+        USER_ROLE_COMMANDS:                                 ['user_role_commands',                   []],
+        USER_EXCLUSIVE_ROLES:                               ['user_exclusive_roles',                 {}],
+        UC_USER_ROLE_COMMANDS:                              ['uc_user_role_commands',                []],
+        UC_USER_EXCLUSIVE_ROLES:                            ['uc_user_exclusive_roles',              {}]
       }
       @valid_keys.each_value do |value|
         #Debug.pp value
@@ -548,9 +581,16 @@ module BifrostBot
     end
 
 
+
     public
 
     # Load or reload the configuration files and set/re-set the values.
+    #
+    # Some of the called methods might raise a ConfigurationError exception,
+    # if there is something seriously wrong in the configuration files.
+    #
+    # @return [nil]
+    #
     def load_and_reload_configuration
       # Read the file with the rest of the server configuration.
       puts(+'Reading ' << @server_configs_file << ' ...') if @debug
@@ -568,7 +608,7 @@ module BifrostBot
       set_some_missing_values
 
       # The CSS used for the generation of html-to-image.
-      load_ordbok_uib_no_css
+      #load_ordbok_uib_no_css
 
       # The text file containing various texts like FAQs, questions and so on.
       load_bot_text_content_files
@@ -585,6 +625,11 @@ module BifrostBot
 
 
 
+    # Fetch the database creation time from the database table.
+    # Then set this value in the configuration.
+    #
+    # @return [nil]
+    #
     def set_database_creation_time
       results_array = DataStorage.find_database_creation_time
       #Debug.pp results_array
@@ -600,10 +645,14 @@ module BifrostBot
     end
 
 
+
     private
 
     # Set some config values that can't be set until the configuration files
     # have been read.
+    #
+    # Might raise a ConfigurationError exception, if there is something
+    # seriously wrong in the configuration files.
     #
     # @return [nil]
     #
@@ -747,6 +796,7 @@ module BifrostBot
     end
 
 
+
     private
 
     # Read and store the CSS-file for the Ordbok.uib.no site.
@@ -806,6 +856,7 @@ module BifrostBot
         Debug.warn '@bot_event_responses is empty!'
         Debug.add_message('WARNING: @bot_event_responses is empty!')
       end
+
       if @bot_silly_texts.nil_or_empty?
         Debug.warn '@bot_silly_texts is empty!'
         Debug.add_message('WARNING: @bot_silly_texts is empty!')
@@ -1225,11 +1276,11 @@ module BifrostBot
 
       yaml_file_hash = {}
       return_hash = {
-        has_live_key:  false,
-        has_test_key:  false,
-        client_id:     nil,
-        client_secret: nil,
-        client_token:  nil,
+        has_live_key:      false,
+        has_test_key:      false,
+        client_id:         nil,
+        client_secret:     nil,
+        client_token:      nil,
         database_username: nil,
         database_password: nil
       }

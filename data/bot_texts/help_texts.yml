@@ -3,6 +3,10 @@
 #
 # Place the file in the data/bot_texts folder.
 #
+# engelsk: “ ”
+# norsk:   « ‘ ’ »
+# kort –  lang —  tre …  gås « ‘ ’ » “ ”
+#
 ---
 
 hjelp:
@@ -10,12 +14,6 @@ hjelp:
   :title: Bifrost-bot – Help
   :title_url: https://github.com/Brukarnamn/Bifrost
   :description:
-    - Created by <@210866460950659072> for the **English-Norwegian Language Exchange** (ENLE) server, with inspiration from **Yoshi**.
-    - 'In loving memory of <@361587053042991125> (2016-2017). Høgt elska, djupt sakna. :sob:'
-    - ''
-    - 'Source code for this bot can be found at:'
-    - '• https://github.com/Brukarnamn/Bifrost'
-    - ''
     - All bot commands start with a `!` as the very first character in a new Discord message, immediately followed by the command itself.
     - 'Overview of the different help commands:'
   :footer:
@@ -26,12 +24,12 @@ hjelp:
       :value:
         - This text.
       :inline: true
-    # Another part.
-    - :name: '!**help roles**  !**role**'
-      :value:
-        - List of commands to add/remove
-        - a user-role from yourself.
-      :inline: true
+    # # Another part.
+    # - :name: '!**help roles**  !**role**'
+    #   :value:
+    #     - List of commands to add/remove
+    #     - a user-role from yourself.
+    #   :inline: true
     # Another part
     - :name: '!**help faq**'
       :value:
@@ -60,24 +58,30 @@ hjelp_roller:
     :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
   :fields:
     # First part. Discord has a limit of 25 field parts.
-    - :name: '!**beginner**'
+    - :name: '!**nybegynner**  !**beginner**'
       :value:
         - Norwegian language beginner role.
         - CEFR level A1-A2.
       :inline: true
     # Another part.
-    - :name: '!**intermediate**'
+    - :name: '!**videregående**  !**intermediate**'
       :value:
         - Norwegian language intermediate role.
         - CEFR level B1-B2.
       :inline: true
+    # # Another part.
+    # - :name: '!**avansert**  !**advanced**'
+    #   :value:
+    #     - Norwegian language advanced role.
+    #     - CEFR level C1-C2.
+    #   :inline: true
     # Another part.
-    - :name: '!**native**'
+    - :name: '!**norsk**  !**native**'
       :value:
         - Norwegian native speaker role.
       :inline: true
     # Another part
-    - :name: '!**bokmål**  !**bokmal**  !**bokmaal**'
+    - :name: '!**bokmål**'
       :value:
         - For members who primarily use *bokmål*
         - when they write Norwegian.
@@ -88,38 +92,48 @@ hjelp_roller:
         - For members who primarily use *nynorsk*
         - when they write Norwegian.
       :inline: true
-    # Another part.
-    - :name: '!**comp**'
-      :value:
-        - Computer-Wannabe role.
-      :inline: true
-    # Another part.
-    - :name: '!**popcorn**'
-      :value:
-        - Norwegian media clips-role.
-      :inline: true
-    # Another part.
-    - :name: ━━━━━━━━━━━━━━━━━━━━
-      :value:
-        - 'Other user roles assigned by moderators:'
-      :inline: false
-    # Another part.
-    # https://cefr.folkeuniversitetet.no/
-    - :name: '!**advanced**'
-      :value:
-        - Norwegian language advanced role.
-        - CEFR level C1-C2.
-      :inline: true
     # Another part
-    - :name: '!**swedish**'
+    - :name: '!**svensk**'
       :value:
         - Swedish native speaker role.
       :inline: true
     # Another part
-    - :name: '!**danish**'
+    - :name: '!**dansk**'
       :value:
         - Danish native speaker role.
       :inline: true
+    # Another part.
+    - :name: '!**utlending**'
+      :value:
+        - Foreigner living in Norway.
+      :inline: true
+    # # Another part.
+    # - :name: '!**data**  !**comp**'
+    #   :value:
+    #     - IT-entusiast / Computer-Wannabe role.
+    #   :inline: true
+    # # Another part.
+    # - :name: '!**spillglad**  !**game**'
+    #   :value:
+    #     - Spill-entusiast role.
+    #   :inline: true
+    # # Another part.
+    # - :name: '!**popkorn**  !**popcorn**'
+    #   :value:
+    #     - Norwegian media clips-role.
+    #   :inline: true
+    # # Another part.
+    # - :name: ━━━━━━━━━━━━━━━━━━━━
+    #   :value:
+    #     - 'Other user roles assigned by moderators:'
+    #   :inline: false
+    # # Another part.
+    # # https://cefr.folkeuniversitetet.no/
+    # - :name: '!**avansert**  !**advanced**'
+    #   :value:
+    #     - Norwegian language advanced role.
+    #     - CEFR level C1-C2.
+    #   :inline: true
 #
 
 hjelp_annet:
@@ -137,24 +151,24 @@ hjelp_annet:
         - Search the [ordbok.uib.no](https://ordbok.uib.no) dictionary for a *bokmål* word.
         - The word you search for must be the word that is present as the main dictionary entry. The [`click here`](https://ordbok.uib.no) text will have the link to the full dictionary entry where you can find a brief definition of the word and its inflection pattern. Usually some example sentences can be found too.
       :inline: true
-    # Another part.
-    - :name: '!**nbu**  !**nbe**  !**bmu**  !**bme**'
-      :value:
-        - Expanded (*utvidet*) version of the previous command.
-        - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
-      :inline: true
+    # # Another part.
+    # - :name: '!**nbu**  !**nbe**  !**bmu**  !**bme**'
+    #   :value:
+    #     - Expanded (*utvidet*) version of the previous command.
+    #     - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
+    #   :inline: true
     # Another part.
     - :name: '!**nn**'
       :value:
         - Search the [ordbok.uib.no](https://ordbok.uib.no) dictionary for a *nynorsk* word.
         - The word you search for must be the word that is present as the main dictionary entry. The [`click here`](https://ordbok.uib.no) text will have the link to the full dictionary entry where you can find a brief definition of the word and its inflection pattern. Usually some example sentences can be found too.
       :inline: true
-    # Another part.
-    - :name: '!**nnu**  !**nne**'
-      :value:
-        - Expanded (*utvidet*) version of the previous command.
-        - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
-      :inline: true
+    # # Another part.
+    # - :name: '!**nnu**  !**nne**'
+    #   :value:
+    #     - Expanded (*utvidet*) version of the previous command.
+    #     - While the previous command will only show results based on main dictionary entries, this alternative tries to search for many of the inflected word forms too, and show results with reference back to the main dictionary words.
+    #   :inline: true
     # Another part.
     - :name: '!**oppgave**  !**oppgåve**  !**opp**  !**øvelse**  !**øving**  !**test**  !**practise**  !**practice**  !**exercise**'
       :value:

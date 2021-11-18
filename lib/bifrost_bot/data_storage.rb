@@ -85,6 +85,8 @@
     "correct"           integer     DEFAULT 0,
     "wrong"             integer     DEFAULT 0,
     "correct_streak"    integer     DEFAULT 0,
+    "highest_streak"    integer     DEFAULT 0,
+    "resets"            integer     DEFAULT 0,
     "created_at"        integer     NOT NULL,
     "updated_at"        integer
   )
@@ -117,13 +119,19 @@ module BifrostBot
 
     public
 
-    # Opens the database for access and sets the internal db_obj
+    # Open the database for access and sets the internal db_obj
     # with some default options.
     #
     # @param filename [String] The filename of the Sqlite database to access.
     # @return [nil]
     #
     def self.db_open(filename)
+      if !File.exist?(filename)
+        Debug.error('Database file does not exist: ' + filename)
+        raise ConfigurationError
+      end
+      Debug.pp filename
+
       # Create a new database and open a connection.
       @db_obj = SQLite3::Database.new(filename)
 
@@ -138,7 +146,7 @@ module BifrostBot
 
 
 
-    # Closes the database connection.
+    # Close the database connection.
     #
     # @return nil
     #
@@ -176,6 +184,7 @@ module BifrostBot
     # Find out when the database was created.
     #
     # @return [Time] The UTC time when the database was created.
+    #
     def self.find_database_creation_time
       #CREATE TABLE "system" (
       #  "created_at"        integer     NOT NULL
@@ -220,7 +229,9 @@ module BifrostBot
     #
     # @param audit_id [Integer] The audit-id to search for.
     # @param repeat_count [Integer, nil] The audit-id count for the audit entry that is being searched for.
-    # @return [Hash, nil] The contents of the audit entry if the audit-id was found. Otherwise nil.
+    # @param changes [String] The changes done in the audit that is being searched for.
+    # @param reason [String] The reason text in the audit that is being searched for.
+    # @return [true, false] True if the specific audit exists already. False otherwise.
     #
     def self.find_audit_log_entry(audit_id, repeat_count: nil, changes: nil, reason: nil)
       #CREATE TABLE "audits" (
@@ -606,7 +617,7 @@ module BifrostBot
 
 
 
-    # Fetch the message-id of last messages a user has made on a server.
+    # Fetch the message-ids of the last messages a user has made on a server.
     # Return an array if the message-ids matching the criteria.
     #
     # @param server_id [Integer] The server-id to search on.
@@ -666,7 +677,7 @@ module BifrostBot
 
     # Fetch the message contents of the message-ids provided.
     # For multiple messages with the same message-id only the last one
-    # will be fetched.
+    # will be fetched (the message after the last edit).
     #
     # @param message_ids_array [Array<Integer>] Array of message-ids to fetch.
     # @return [Hash<Hash>] Hash with message-id keys containing the message-contents as a Hash.
@@ -881,6 +892,64 @@ module BifrostBot
 
 
 
+    # Properly delete all messages that are "too old".
+    # Return true on success.
+    #
+    # @param message_id [Integer] The message-id of the messages to mark as deleted.
+    # @return [true, false] Return true on success. False otherwise.
+    #
+    def self.delete_user_messages(deleted_at_time)
+      #CREATE TABLE "messages" (
+      #  "message_id"        integer     NOT NULL,
+      #  "server_id"         integer     NOT NULL,
+      #  "channel_id"        integer     NOT NULL,
+      #  "user_id"           integer     NOT NULL,
+      #  "is_private_msg"    boolean     DEFAULT 0,
+      #  "message"           text,
+      #  "files"             text,
+      #  "created_at"        integer     NOT NULL,
+      #  "edited_at"         integer,
+      #  "deleted_at"        integer
+      #)
+
+      # Double check that data is correct before using it.
+      # Convert it to string for sqlite.
+      # 2017-11-18T14:20:02Z
+      # current_utc_time = Time.now.utc.strftime '%Y-%m-%dT%H:%M:%SZ'
+      deleted_at_utc = if deleted_at_time.is_a?(Time)
+                         deleted_at_time.utc.strftime(@time_format_str)
+                       else
+                         Time.parse(deleted_at_time).utc.strftime(@time_format_str)
+                       end
+      #
+
+      sql = 'DELETE' \
+            'FROM "messages" ' \
+            'WHERE "deleted_at" IS NOT NULL AND "deleted_at" < ? '
+      #
+      sql_exec = @db_obj.prepare(sql)
+
+      #results = sql_exec.execute([deleted_at_utc])
+      #
+      sql_exec.execute([deleted_at_utc])
+      #
+      puts Debug.msg(sql, 'blue') if BOT_CONFIG.debug
+
+      # This just prints out [] so ignore.
+      #result_arrayhash = []
+      #results.each_hash { |row_data| result_arrayhash.push row_data }
+      #puts Debug.msg("#{__FILE__},#{__LINE__}:", 'black'), Debug.pp(result_arrayhash, 0, false) if BOT_CONFIG.debug_spammy
+
+      # The number of update changes that were done.
+      number_of_database_changes = @db_obj.changes
+      puts Debug.msg("#{__FILE__},#{__LINE__}: ", 'black') + Debug.msg(number_of_database_changes.to_s, 'blue') if BOT_CONFIG.debug_spammy
+
+      # Return true if 1 or more deletes were successfully done, false otherwise
+      number_of_database_changes.positive?
+    end
+
+
+
     # Create a user event entry in the database.
     # Return true on success.
     #
@@ -978,6 +1047,7 @@ module BifrostBot
       sql = 'SELECT "rowid", "user_id", "username", "nickname" ' \
             'FROM "user_changes" ' \
             'WHERE "server_id" = ? AND "user_id" = ? AND ("username" IS NOT NULL AND "username" <> "") '
+      #
       sql_exec = @db_obj.prepare(sql)
 
       results = sql_exec.execute([server_id,
@@ -1002,9 +1072,56 @@ module BifrostBot
 
 
 
+    # Delete all user entires made for a certain user-id.
+    # Return true on success.
+    #
+    # @param server_id [Integer] The server-id to search for.
+    # @param user_id [Integer] The user-id to search for.
+    # @return [true, false] Return true on success. False otherwise.
+    #
+    def self.delete_db_user_info(server_id, user_id)
+      #CREATE TABLE "user_changes" (
+      #  "server_id"         integer     NOT NULL,
+      #  "user_id"           integer     NOT NULL,
+      #  "username"          varchar(64),
+      #  "nickname"          varchar(64),
+      #  "avatar_id"         varchar(35),
+      #  "avatar_url"        varchar(256),
+      #  "note"              text,
+      #  "created_at"        integer     NOT NULL
+      #)
+
+      sql = 'DELETE' \
+            'FROM "user_changes" ' \
+            'WHERE "server_id" = ? AND "user_id" = ? '
+      #
+      sql_exec = @db_obj.prepare(sql)
+
+      #results = sql_exec.execute([server_id,
+      #                            user_id])
+      #
+      sql_exec.execute([server_id,
+                        user_id])
+      #
+      puts Debug.msg(sql, 'blue') if BOT_CONFIG.debug
+
+      # This just prints out [] so ignore.
+      #result_arrayhash = []
+      #results.each_hash { |row_data| result_arrayhash.push row_data }
+      #puts Debug.msg("#{__FILE__},#{__LINE__}:", 'black'), Debug.pp(result_arrayhash, 0, false) if BOT_CONFIG.debug_spammy
+
+      # The number of update changes that were done.
+      number_of_database_changes = @db_obj.changes
+      puts Debug.msg("#{__FILE__},#{__LINE__}: ", 'black') + Debug.msg(number_of_database_changes.to_s, 'blue') if BOT_CONFIG.debug_spammy
+
+      # Return true if 1 or more deletes were successfully done, false otherwise
+      number_of_database_changes.positive?
+    end
+
+
+
     # Fetch all the users from the server_users table marked as still on the
     # server.
-    # Then update the updated_at timestamp.
     #
     # @param server_id [Integer] The server-id to check for the user.
     # @param updated_at [Time] Update date to compare with and do changes based on.
@@ -1053,6 +1170,9 @@ module BifrostBot
     # Attempt to change the timestamp of updated_at for every user in
     # the server_users table that are marked as still joined/present.
     # Return true on success.
+    #
+    # This will fail on the very first startup of the bot, since
+    # the table is not yet filled.
     #
     # @param server_id [Integer] The server-id to check for the user.
     # @param updated_at [Time] Update date to compare with and do changes based on.
@@ -1380,11 +1500,13 @@ module BifrostBot
       #  "correct"           integer     DEFAULT 0,
       #  "wrong"             integer     DEFAULT 0,
       #  "correct_streak"    integer     DEFAULT 0,
+      #  "highest_streak"    integer     DEFAULT 0,
+      #  "resets"            integer     DEFAULT 0,
       #  "created_at"        integer     NOT NULL,
       #  "updated_at"        integer
       #)
 
-      sql = 'SELECT "user_id", "questions_asked", "answered", "correct", "wrong", "correct_streak", "created_at" ' \
+      sql = 'SELECT "user_id", "questions_asked", "answered", "correct", "wrong", "correct_streak", "highest_streak", "resets", "created_at" ' \
             'FROM "exercises" ' \
             'WHERE "user_id" = ? ' \
             'LIMIT 1'
@@ -1404,6 +1526,8 @@ module BifrostBot
           correct:         row_data['correct'],
           wrong:           row_data['wrong'],
           correct_streak:  row_data['correct_streak'],
+          highest_streak:  row_data['highest_streak'],
+          resets:          row_data['resets'],
           created_at:      row_data['created_at']
         }
         created_at = results_data[:created_at]
@@ -1440,6 +1564,8 @@ module BifrostBot
       #  "correct"           integer     DEFAULT 0,
       #  "wrong"             integer     DEFAULT 0,
       #  "correct_streak"    integer     DEFAULT 0,
+      #  "highest_streak"    integer     DEFAULT 0,
+      #  "resets"            integer     DEFAULT 0,
       #  "created_at"        integer     NOT NULL,
       #  "updated_at"        integer
       #)
@@ -1459,9 +1585,9 @@ module BifrostBot
       user_data_hash[:created_at] = created_at
 
       sql = 'INSERT INTO "exercises" (' \
-            '  "user_id", "questions_asked", "answered", "correct", "wrong", "correct_streak", "created_at" ' \
+            '  "user_id", "questions_asked", "answered", "correct", "wrong", "correct_streak", "highest_streak", "resets", "created_at" ' \
             '  ) values (' \
-            '   ?,         ?,                 ?,          ?,         ?,       ?,                ? ' \
+            '   ?,         ?,                 ?,          ?,         ?,       ?,                ?,                ?,        ? ' \
             '  ) '
       #
       sql_exec = @db_obj.prepare(sql)
@@ -1472,6 +1598,8 @@ module BifrostBot
       #                            user_data_hash[:correct],
       #                            user_data_hash[:wrong],
       #                            user_data_hash[:correct_streak],
+      #                            user_data_hash[:highest_streak],
+      #                            user_data_hash[:resets],
       #                            created_at_utc])
       #
       sql_exec.execute([user_data_hash[:user_id],
@@ -1480,6 +1608,8 @@ module BifrostBot
                         user_data_hash[:correct],
                         user_data_hash[:wrong],
                         user_data_hash[:correct_streak],
+                        user_data_hash[:highest_streak],
+                        user_data_hash[:resets],
                         created_at_utc])
       #
       puts Debug.msg(sql, 'blue') if BOT_CONFIG.debug
@@ -1512,6 +1642,8 @@ module BifrostBot
       #  "correct"           integer     DEFAULT 0,
       #  "wrong"             integer     DEFAULT 0,
       #  "correct_streak"    integer     DEFAULT 0,
+      #  "highest_streak"    integer     DEFAULT 0,
+      #  "resets"            integer     DEFAULT 0,
       #  "created_at"        integer     NOT NULL,
       #  "updated_at"        integer
       #)
@@ -1529,7 +1661,9 @@ module BifrostBot
       #
 
       sql = 'UPDATE "exercises" ' \
-            'SET "questions_asked" = ?, "answered" = ?, "correct" = ?, "wrong" = ?, "correct_streak" = ?, "updated_at" = ? ' \
+            'SET "questions_asked" = ?, "answered" = ?, "correct" = ?, "wrong" = ?, ' \
+            ' "correct_streak" = ?, "highest_streak" = ?, "resets" = ?, ' \
+            ' "updated_at" = ? ' \
             'WHERE "user_id" = ? ' \
       #
       sql_exec = @db_obj.prepare(sql)
@@ -1539,6 +1673,8 @@ module BifrostBot
       #                            user_data_hash[:correct],
       #                            user_data_hash[:wrong],
       #                            user_data_hash[:correct_streak],
+      #                            user_data_hash[:highest_streak],
+      #                            user_data_hash[:resets],
       #                            updated_at_utc,
       #                            user_data_hash[:user_id]])
       #
@@ -1547,6 +1683,8 @@ module BifrostBot
                         user_data_hash[:correct],
                         user_data_hash[:wrong],
                         user_data_hash[:correct_streak],
+                        user_data_hash[:highest_streak],
+                        user_data_hash[:resets],
                         updated_at_utc,
                         user_data_hash[:user_id]])
       #

@@ -41,7 +41,11 @@ module BifrostBot
                 :number_of_answers,
                 :number_of_correct,
                 :number_of_wrong,
+                #
                 :correct_streak_count,
+                :highest_correct_streak_count,
+                #
+                :reset_count,
                 #
                 :created_at,
                 :updated_at,
@@ -61,11 +65,15 @@ module BifrostBot
     def initialize(user_id)
       @user_id = user_id
 
-      @number_of_shown      = 0
-      @number_of_answers    = 0
-      @number_of_correct    = 0
-      @number_of_wrong      = 0
-      @correct_streak_count = 0
+      @number_of_shown   = 0
+      @number_of_answers = 0
+      @number_of_correct = 0
+      @number_of_wrong   = 0
+
+      @correct_streak_count         = 0
+      @highest_correct_streak_count = 0
+
+      @reset_count = 0
 
       @created_at = Time.now.utc
       @updated_at = nil
@@ -90,7 +98,9 @@ module BifrostBot
           answered:        @number_of_answers,
           correct:         @number_of_correct,
           wrong:           @number_of_wrong,
-          correct_streak:  @correct_streak_count
+          correct_streak:  @correct_streak_count,
+          highest_streak:  @highest_correct_streak_count,
+          resets:          @reset_count
         }
         success = DataStorage.save_exercise_user_data(db_data_hash)
         Debug.internal('Unable to write exercise user data to database.') if !success
@@ -98,12 +108,16 @@ module BifrostBot
         # Returns an array with 1 element.
         exercise_user_data = exercise_user_data.pop
 
-        @number_of_shown      = exercise_user_data[:questions_asked]
-        @number_of_answers    = exercise_user_data[:answered]
-        @number_of_correct    = exercise_user_data[:correct]
-        @number_of_wrong      = exercise_user_data[:wrong]
-        @correct_streak_count = exercise_user_data[:correct_streak]
-        @created_at           = exercise_user_data[:created_at]
+        @number_of_shown   = exercise_user_data[:questions_asked]
+        @number_of_answers = exercise_user_data[:answered]
+        @number_of_correct = exercise_user_data[:correct]
+        @number_of_wrong   = exercise_user_data[:wrong]
+
+        @correct_streak_count         = exercise_user_data[:correct_streak]
+        @highest_correct_streak_count = exercise_user_data[:highest_streak]
+
+        @reset_count = exercise_user_data[:resets]
+        @created_at  = exercise_user_data[:created_at]
       end
 
       #return nil
@@ -115,13 +129,20 @@ module BifrostBot
 
     def to_s
       protected_write_values = %w[
+        user_id
+
         number_of_shown
         number_of_answers
         number_of_correct
         number_of_wrong
         correct_streak_count
+        highest_correct_streak_count
+        reset_count
 
         exercises_list
+
+        created_at
+        updated_at
 
         current_exercise
         category_key
@@ -153,7 +174,9 @@ module BifrostBot
         answered:        @number_of_answers,
         correct:         @number_of_correct,
         wrong:           @number_of_wrong,
-        correct_streak:  @correct_streak_count
+        correct_streak:  @correct_streak_count,
+        highest_streak:  @highest_correct_streak_count,
+        resets:          @reset_count
       }
       success = DataStorage.update_exercise_user_data(db_data_hash)
       Debug.internal('Unable to write exercise user data to database.') if !success
@@ -184,9 +207,12 @@ module BifrostBot
 
 
     def update_correct_answer
-      @number_of_answers    += 1
-      @number_of_correct    += 1
+      @number_of_answers += 1
+      @number_of_correct += 1
+
       @correct_streak_count += 1
+
+      @highest_correct_streak_count = @correct_streak_count if @correct_streak_count > @highest_correct_streak_count
 
       update_database
 
@@ -197,8 +223,9 @@ module BifrostBot
 
 
     def update_wrong_answer
-      @number_of_answers   += 1
-      @number_of_wrong     += 1
+      @number_of_answers += 1
+      @number_of_wrong   += 1
+
       @correct_streak_count = 0
 
       update_database
@@ -210,11 +237,15 @@ module BifrostBot
 
 
     def reset_stats
-      @number_of_shown      = current_exercise.nil? ? 0 : 1
-      @number_of_answers    = 0
-      @number_of_correct    = 0
-      @number_of_wrong      = 0
-      @correct_streak_count = 0
+      @number_of_shown   = current_exercise.nil? ? 0 : 1
+      @number_of_answers = 0
+      @number_of_correct = 0
+      @number_of_wrong   = 0
+
+      @correct_streak_count         = 0
+      @highest_correct_streak_count = 0
+
+      @reset_count += 1
 
       update_database
 

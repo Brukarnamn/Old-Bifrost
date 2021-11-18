@@ -38,16 +38,47 @@ module BifrostBot
 
         is_private_message = helper_obj.is_private_message
 
-        # Update that the server was active if it is one of the channels to check against.
-        # - If it was not the bot itself that did the message
-        # - If it is not a private message and
-        #   if the channel id is in the list of channels to compare against
-        # - But if the channel list is empty, consider that to mean all channels should be checked.
-        if !is_private_message &&
-           !BOT_CONFIG.server_activity_channels.nil? &&
-           (BOT_CONFIG.server_activity_channels.empty? || BOT_CONFIG.server_activity_channels.key?(helper_obj.channel_id))
-          BOT_CACHE.update_last_activity(helper_obj.server_id, helper_obj.user_id)
-          #puts Debug.msg('blip', 'red')
+        # Update that the server was active.
+        if update_user_activity?(helper_obj)
+          # If the channel value is nil, it is added just to check and update the activity.
+          # Update the activity time, but pretend it was the same user as last time.
+          if !BOT_CONFIG.server_activity_channels[helper_obj.channel_id].nil?
+            #puts Debug.msg('BLIP! user', 'green')
+            BOT_CACHE.update_last_activity(helper_obj.server_id, helper_obj.user_id)
+          else
+            last_server_activity = BOT_CACHE.last_activity(helper_obj.server_id)
+            last_server_activity_user_id = last_server_activity[:user_id]
+
+            #puts Debug.msg('BLIP! pretend it was last user', 'red')
+            BOT_CACHE.update_last_activity(helper_obj.server_id, last_server_activity_user_id)
+          end
+        end
+
+        # Check of the text matches any of the regexpes for illegal/unwanted texts patterns.
+        # Do this before the command check to avoid people trying to pass it as a bot command.
+        untwanted_text = message_contains_untwanted_text?(helper_obj)
+        untwanted_text_from_roleless = message_contains_untwanted_text_from_roleless?(helper_obj)
+
+        if (untwanted_text || untwanted_text_from_roleless) && !helper_obj.user_is_server_moderator?
+          begin
+            event_obj.channel.delete_message(helper_obj.message_id)
+
+            config_str = BOT_CONFIG.bot_event_responses[:message_delete_mod]
+            config_str = helper_obj.substitute_event_vars(config_str)
+            #message_str = BOT_CONFIG.moderator_ping + ': ' + config_str + " ```\n" + helper_obj.message + "\n```"
+
+            message_str = ''
+            message_str = +'' << BOT_CONFIG.moderator_ping << ': ' if untwanted_text
+
+            message_str += config_str << ' ```' << helper_obj.message << '```'
+          rescue Discordrb::Errors::NoPermission => err
+            Debug.error 'MISSING BOT PERMISSIONS: ' + err.message
+            message_str = 'Delete message: ' + err.message
+
+          # This will always be done.
+          ensure
+            BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, message_str)
+          end
         end
 
         # Check if the text starts with the bot command/invoke character.
@@ -63,11 +94,25 @@ module BifrostBot
           #  uc_command_args_str: helper_obj.uc_command_args_str
           #}
           #success = Commands.custom_command_parser(event_obj, is_private_message, command_hash)
-          success = Commands.custom_command_parser(event_obj, is_private_message, helper_obj.command)
+          begin
+            success = Commands.custom_command_parser(event_obj, is_private_message, helper_obj.command)
+          rescue Discordrb::Errors::NoPermission => err
+            Debug.error 'MISSING BOT PERMISSIONS: ' + err.message
+            message_str = +'**' << helper_obj.command << '**: ' << err.message
+            BOT_OBJ.send_message(BOT_CONFIG.audit_spam_public_channel_id, message_str)
+          end
 
           # Respond with an emoji if the command got successfully triggered, and if there happens to be an emoji to respond with.
           # But only if it was not a private message.
-          event_obj.message.create_reaction BOT_CONFIG.bot_valid_command_emoji if success && !is_private_message && !BOT_CONFIG.bot_valid_command_emoji.nil_or_empty?
+          if success && !is_private_message && !BOT_CONFIG.bot_valid_command_emoji.nil_or_empty?
+            begin
+              event_obj.message.create_reaction BOT_CONFIG.bot_valid_command_emoji
+            rescue Discordrb::Errors::NoPermission => err
+              Debug.error 'MISSING BOT PERMISSIONS: ' + err.message
+              #message_str = 'Command emoji-react: ' + err.message
+              #BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, message_str)
+            end
+          end
 
           #return # Exception: #<LocalJumpError: unexpected return>
           # Skip doing anything else since it was an attempted command.
@@ -94,8 +139,8 @@ module BifrostBot
           break
         end
 
-        # Skip doing anything else based on or because of the
-        # message if it was sent as a private message.
+        # Skip doing anything else based on or because of the message
+        # if it was sent as a private message.
         #return if is_private_message  # Exception: #<LocalJumpError: unexpected return>
         #break if is_private_message   # Exception: #<LocalJumpError: break from proc-closure>
         next if is_private_message
@@ -103,14 +148,68 @@ module BifrostBot
         if BOT_CONFIG.emoji_react_channels.key?(helper_obj.channel_id)
           reaction_emojis = BOT_CONFIG.emoji_react_channels[helper_obj.channel_id]
 
-          reaction_emojis.each do |emoji|
-            event_obj.message.create_reaction emoji
-            sleep 1.1 # discordrb will slow it down appropriately anyway.
+          # If a user has blocked the bot or in general anyone you can't react with emojis.
+          # Or if the user or channel permission doesn't allow it an exception will be thrown.
+          begin
+            reaction_emojis.each do |emoji|
+              event_obj.message.create_reaction emoji
+              sleep 1.1 # discordrb will slow it down appropriately anyway.
+            end
+          rescue Discordrb::Errors::NoPermission => err
+            Debug.error 'MISSING BOT PERMISSIONS: ' + err.message
+            message_str = 'Emoji-react: ' + err.message
+            BOT_OBJ.send_message(BOT_CONFIG.audit_spam_mod_channel_id, message_str)
           end
         end
 
         #return nil # Exception: #<LocalJumpError: unexpected return>
         nil
+      end
+
+
+
+      # Update that the server was active if it is one of the channels to check against.
+      # - If it was not the bot itself that did the message
+      # - If it is not a private message and
+      #   if the channel id is in the list of channels to compare against
+      # - But if the channel list is empty, consider that to mean all channels should be checked.
+      def self.update_user_activity?(helper_obj)
+        return false if helper_obj.user_is_bot
+        return false if helper_obj.is_private_message
+        return false if BOT_CONFIG.server_activity_channels.nil?
+
+        return true if BOT_CONFIG.server_activity_channels.empty?
+        return true if BOT_CONFIG.server_activity_channels.key?(helper_obj.channel_id)
+
+        #return false
+        false
+      end
+
+
+
+      def self.message_contains_untwanted_text?(helper_obj)
+        return false if helper_obj.is_private_message
+
+        BOT_CONFIG.illegal_messages.each do |single_regexp_trigger|
+          return true if helper_obj.message.match?(/#{single_regexp_trigger}/i)
+        end
+
+        #return false
+        false
+      end
+
+
+
+      def self.message_contains_untwanted_text_from_roleless?(helper_obj)
+        return false if helper_obj.is_private_message
+        return false if !helper_obj.user_is_roleless?
+
+        BOT_CONFIG.illegal_messages_roleless.each do |single_regexp_trigger|
+          return true if helper_obj.message.match?(/#{single_regexp_trigger}/i)
+        end
+
+        #return false
+        false
       end
 
     end

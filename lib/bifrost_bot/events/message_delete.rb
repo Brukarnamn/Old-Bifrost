@@ -101,9 +101,9 @@ module BifrostBot
           is_edited_utc = is_edited ? data_row[:edited_at].to_s : ''
 
           field = {
-            name: +'━━━ ' <<
-                  i.to_s << ' (' << (is_edited ? (+'edit ' << is_edited_utc) : 'original message') <<
-                  ') ━━━ ',
+            name:  +'━━━ ' <<
+                   i.to_s << ' (' << (is_edited ? (+'edit ' << is_edited_utc) : 'original message') <<
+                   ') ━━━ ',
             value: (message.empty? ? '.' : message) # To prevent Discord's automatic join messages (which are server made) to cause bugs.
           }
           embed_data_hash[:fields].push(field)
@@ -189,7 +189,7 @@ module BifrostBot
           puts Debug.msg(+'User MESSAGE-id: ' << message_id.to_s << ' was deleted. User-id: ' << target_user_id.to_s << '')
 
           if !files.nil? && !files.empty?
-            field = { name: 'Attachments:',
+            field = { name:  'Attachments:',
                       value: files }
             embed_data_hash[:fields].unshift(field)
           end
@@ -247,7 +247,7 @@ end
 =end
 =begin
   2017-11-21 15:44:05.021 websocket        ← {"t"=>"MESSAGE_DELETE", "s"=>10, "op"=>0, "d"=>{
-    "id"=>"382541652759412736",
+    "id"=>"987654321098765432",
     "channel_id"=>"123456789012345678"}}
 
   2017-11-21 16:11:27.430 websocket        ← {"t"=>"MESSAGE_DELETE_BULK", "s"=>9, "op"=>0, "d"=>{"ids"=>["382522334080139265", "382544221594451989", "382547735783538688"], "channel_id"=>"123456789012345678"}}

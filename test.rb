@@ -99,7 +99,7 @@ if test_ordbok
 end
 
 if test_parser
-  html_str = %q[<div class="artikkelinnhold"> <span class="oppslagsord b" id="67512">nokon</span> <span class="oppsgramordklasse" onclick="vise_fullformer(&quot;67512&quot;)">det.</span> (norrønt <span style="font-style: italic">nǫkkurr</span>, samandrege av fleire ord, opphavleg 'ikkje veit eg kven')<span class="utvidet"></span></div><div class="tyding utvidet" style="margin-top: 15px;"> <span style="font-family:  Arial, Verdana; font-weight: 900; font-size: 100%;">1</span> ein viss, ein eller annan, einkvan; (i fleirtal:) somme, visse (ikkje mange)<div class="doemeliste utvidet"><span class="doeme utvidet"><span style="font-style: italic">er det <span style="font-style: italic">nokon</span> kiosk i nærleiken?</span></span></div><div class="tyding utvidet" style="margin-top: 15px;"> <span class="utvidet"><img src="/grafikk/black_circle_e.png" width="6px" height="6px" /></span> i nøytrum: eitt eller anna, eitkvart<div class="doemeliste utvidet"><span class="doeme utvidet"><span style="font-style: italic">det er noko i vegen med bilen</span></span></div></div><div class="tyding utvidet" style="margin-top: 15px;"> <span class="utvidet"><img src="/grafikk/black_circle_e.png" width="6px" height="6px" /></span> ein viss ting<div class="doemeliste utvidet"><span class="doeme utvidet"><span style="font-style: italic">det hende meg noko underleg i går</span></span><span> / </span><span class="doeme utvidet"><span style="font-style: italic">han er noko i postverket</span> har ei eller anna stilling</span></div></div></div>]
+  html_str = %q[<div class="artikkelinnhold"></div>]
   example_nodes = Hpricot(html_str)
 
   str = OrdbokDictionary.parse_ordbok_html_node_tree(example_nodes)

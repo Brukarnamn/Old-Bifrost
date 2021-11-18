@@ -3,6 +3,10 @@
 #
 # Place the file in the data/bot_texts folder.
 #
+# engelsk: “ ”
+# norsk:   « ‘ ’ »
+# kort –  lang —  tre …  gås « ‘ ’ » “ ”
+#
 ---
 
 hjelp_oss:
@@ -35,48 +39,48 @@ oss_roles:
     :text: In loving memory of Askeladden (2016-2017). Høgt elska, djupt sakna.
   :fields:
     # First part. Discord has a limit of 25 field parts.
-    - :name: '**Beginner**'
+    - :name: '**Beginner** – !**nybegynner**  !**beginner**'
       :value:
         - Role for members who have just started learning Norwegian or haven't acquired the basics just yet. It also gives access to a few other channels.
         - CEFR level A1-A2.
       :inline: false
     # Another part.
-    - :name: '**Intermediate**'
+    - :name: '**Intermediate** – !**videregående**  !**intermediate**'
       :value:
         - Role for members who know basic Norwegian, but still lack vocabulary compared to "advanced" and not able to perform structures with more complicated grammar.
         - CEFR level B1-B2.
       :inline: false
     # Another part
     # https://cefr.folkeuniversitetet.no/
-    - :name: '**Advanced**'
+    - :name: '**Advanced** – !**avansert**  !**advanced**'
       :value:
         - Role for members who are fluent in Norwegian. Currently you need to ask a moderator for this role.
         - CEFR level C1-C2.
       :inline: false
     # Another part
-    - :name: '**Native**'
+    - :name: '**Native** – !**norsk**  !**native**'
       :value:
         - Role for native Norwegian speakers.
         - These should have the ability to speak and write Norwegian without obvious grammatical or syntactical errors in addition to cultural knowledge of Norwegian society. People should normally be able to trust anything they write and any answers they might give when answering questions.
         - Please contact the user or a moderator if you feel someone should not have this role.
       :inline: false
     # Another part
-    - :name: '**Bokmål**'
+    - :name: '**Bokmål** – !**bokmål**'
       :value:
         - Role for members who primarily use *bokmål* when they write Norwegian.
       :inline: false
     # Another part
-    - :name: '**Nynorsk**'
+    - :name: '**Nynorsk** – !**nynorsk**'
       :value:
         - Role for members who primarily use *nynorsk* when they write Norwegian.
       :inline: false
     # Another part
-    - :name: '**Swedish**'
+    - :name: '**Swedish** – !**svensk**'
       :value:
         - Role for members who have Swedish as their native spoken language.
       :inline: false
     # Another part
-    - :name: '**Danish**'
+    - :name: '**Danish** – !**dansk**'
       :value:
         - Role for members who have Danish as their native spoken language.
       :inline: false
@@ -96,36 +100,28 @@ oss_roles:
         - Role for people that have volunteered to help answer people and create activity in <#283985790290231296>.
       :inline: false
     # Another part
-    - :name: '**Comp**'
+    - :name: '**Utlending** – !**utlending**'
+      :value:
+        - Role for members who are foreigners, but currently live (temporarily) in Norway. For example exchange students, (guest) workers, etc.
+      :inline: false
+    # Another part
+    - :name: '**IT-entusiast** – !**data**  !**comp**'
       :value:
         - Role for members who are above average interested in computer stuff.
       :inline: false
     # Another part
-    - :name: '**Popcorn**'
+    - :name: '**Spill-entusiast** – !**spillglad**  !**game**'
+      :value:
+        - Role for members who are interested in chatting in Norwegian while playing games.
+      :inline: false
+    # Another part
+    - :name: '**Popcorntime** – !**popkorn**  !**popcorn**'
       :value:
         - Role for members who are interested in notifications when Norwegian (dubbed) films and video clips are being shown.
       :inline: false
+    # Another part
+    - :name: '**Stas**, **Stamgjest**, **Innflyttet**, **Fastgrodd**, **Gjenganger**, **TOTALLY HUMAN**'
+      :value:
+        - Roles automatically given to members that have been active as a way to show recognition of contribution to the community. These people are some of our older, more active members. Unlike the **Contributor** role this is simply based on quantity, not quality.
+      :inline: false
 #
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

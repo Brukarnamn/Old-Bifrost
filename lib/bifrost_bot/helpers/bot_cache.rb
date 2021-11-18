@@ -74,13 +74,19 @@ module BifrostBot
     def initialize_roles_and_users_and_channels
       # Does not seem to work unless you have a long enough wait.
       #BOT_OBJ.game = 'Creating rain ...'
-      #sleep 30
+      #sleep 5
 
       server_id = BOT_CONFIG.bot_runs_on_server_id
       server_obj = BOT_OBJ.server(server_id)
       roles_array = server_obj.roles
+      ap server_obj
+      # puts 'mmmmmm' if server_obj.respond_to?('members')
+      puts 'ffffff' if !server_obj.respond_to?('members')
+      # puts 'meep2'
       users_array = server_obj.members
-      #channes_array = server_obj.channels
+      # puts 'meep3'
+      channes_array = server_obj.channels
+      # puts 'meep4'
 
       # Make sure these are reset.
       @role_ids = {}
@@ -157,19 +163,19 @@ module BifrostBot
         # Create a hash
         user_id = user_obj.id
         single_user_data_hash = {
-          id: user_id,
-          username: user_obj.username,
+          id:            user_id,
+          username:      user_obj.username,
           discriminator: user_obj.discriminator,
-          distinct: user_obj.distinct,
-          mention: user_obj.mention,
-          avatar_id: user_obj.avatar_id,
-          avatar_url: user_obj.avatar_url,
-          game: user_obj.game,
-          bot_account: user_obj.bot_account?,
+          distinct:      user_obj.distinct,
+          mention:       user_obj.mention,
+          avatar_id:     user_obj.avatar_id,
+          avatar_url:    user_obj.avatar_url,
+          game:          user_obj.game,
+          bot_account:   user_obj.bot_account?,
 
-          nick: user_obj.nick,
-          roles: user_roles,
-          joined_at: user_obj.joined_at
+          nick:          user_obj.nick,
+          roles:         user_roles,
+          joined_at:     user_obj.joined_at
         }
 
         # And make a new helper user object with the hash data.
@@ -633,7 +639,7 @@ module BifrostBot
 
     def update_last_activity(server_id, user_id)
       @server_last_activity_hash[server_id] = {
-        time: Time.now.utc,
+        time:    Time.now.utc,
         user_id: user_id
       } #if server_id.positive?
 
@@ -647,7 +653,7 @@ module BifrostBot
       if @server_last_activity_hash.key?(server_id)
         @server_last_activity_hash[server_id]
       else
-        { time: BOT_CONFIG.bot_startup_time,
+        { time:    BOT_CONFIG.bot_startup_time,
           user_id: nil }
       end
     end

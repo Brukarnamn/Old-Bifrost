@@ -56,8 +56,10 @@ module Debug
     attr_reader :do_indent
     alias do_indent? do_indent
 
-    # Returns a string of 1 tab identation.
+    # Return a string of 1 tab identation.
+    #
     # @return [String]
+    #
     def indent_tab_length
       INDENT_TAB_LENGTH
     end
@@ -79,7 +81,7 @@ module Debug
     public
     protected
 
-    # Just sets all the class variables to their initial values.
+    # Set all the class variables to their initial values.
     #
     # @return [nil]
     #
@@ -116,13 +118,12 @@ module Debug
       # Current indent.
       @indent_at = 0
 
-      # Global message log. Not thread safe.
+      # Global message log.
       @message_log = []
 
       #return nil
       nil
     end
-    #initialize_variables
 
     private
   end
@@ -151,7 +152,7 @@ module Debug
 
   module_function
 
-  # Prints out a test message repeated in all the supported colours.
+  # Print out a test message repeated in all the supported colours.
   #
   # @return [nil]
   #
@@ -236,7 +237,7 @@ module Debug
 
   module_function
 
-  # Prints out a dividing line consisting of '_____'
+  # Print out a dividing line consisting of '_____'
   #
   # @param message [String] A message to be printed in the middle of the divider string.
   # @param number_of_times [Integer] Number of times the dividing string should be printed
@@ -266,7 +267,7 @@ module Debug
 
 
 
-  # Returns the input string with coloured tags added.
+  # Return the input string with coloured tags added.
   #
   # @param text_string [String] String to turn into a colour string.
   # @param colour [String] A predefined colour to turn the string into.
@@ -310,7 +311,7 @@ module Debug
 
   module_function
 
-  # Prints out a the contents of a Hash/Array in a very verbose way.
+  # Print out a the contents of a Hash/Array in a very verbose way.
   #
   # @param object [Object] The object or variable to print out the values for.
   # @param indent [Integer] The current indent level, determining the amount of space there will
@@ -412,7 +413,7 @@ module Debug
 
 
 
-  # Fetches all the messages from the message/debug log.
+  # Fetch all the messages from the message/debug log.
   #
   # @param clear_log_afterwards [true, false] True if the log should be cleared afterwards. False otherwise.
   # @return [String] The current message/debug log as a long string.
@@ -428,7 +429,7 @@ module Debug
 
 
 
-  # Fetches all the messages from the message/debug log, but split them so each string fits inside
+  # Fetch all the messages from the message/debug log, but split them so each string fits inside
   # N amount of characters.
   #
   # @param max_string_length [Integer] The max length of each individual string in the return array.
@@ -436,7 +437,7 @@ module Debug
   # @param clear_log_afterwards [true, false] True if the log should be cleared afterwards. False otherwise.
   # @return [Array<String>] The current message/debug log as an array of strings.
   #
-  def fetch_messages_as_array(max_string_length = 2047, markdown = false, clear_log_afterwards = true)
+  def fetch_messages_as_array(max_string_length = 1_999, markdown = false, clear_log_afterwards = true)
     return_array = []
     newline_character = "\n"
     merged_str = ''
@@ -472,7 +473,7 @@ module Debug
 
 
 
-  # Clears the message/debug log.
+  # Clear the message/debug log.
   #
   # @return [nil]
   #
@@ -485,7 +486,7 @@ module Debug
 
 
 
-  # Increases the indent amount after the text is printed.
+  # Increase the indent amount after the text is printed.
   #
   # @see #trace_internal
   # @param message [String] A custom message to use instead of the caller's current function name.
@@ -500,7 +501,7 @@ module Debug
 
 
 
-  # Decreases the indent amount before the text is printed.
+  # Decrease the indent amount before the text is printed.
   #
   # @see #trace_internal
   # @param message [String] A custom message to use instead of the caller's current function name.
@@ -525,7 +526,7 @@ module Debug
 
   module_function
 
-  # Prints out a trace text.
+  # Print out a trace text.
   #
   # @see #trace_internal
   # @param message [String] A custom message to use instead of the caller's current function name.
@@ -544,7 +545,7 @@ module Debug
     public
     protected
 
-    # Prints out the caller's current source file and line number and current function.
+    # Print out the caller's current source file and line number and current function.
     #
     # @param is_indent [Boolean, nil] Tells if it is the start or end of a function
     #   to determine if the debug message should be indented or outdented.
@@ -611,20 +612,20 @@ module Debug
       #puts '-----msg-----| ' + message.to_s + ' | ' + (message.nil? ? 'nil' : 'tekst' ) + ' |-----'
 
       current = caller_function_info_str(
-        message: message || cur_message,
+        message:              message || cur_message,
         is_callstack_message: (message.nil? ? true : false),
-        filename: cur_file,
-        lineno: cur_line
+        filename:             cur_file,
+        lineno:               cur_line
       )
 
       if message
         output = indent_string << current << (do_indent ? '' : @inoutdent_end_character)
       else
         from = caller_function_info_str(
-          message: call_message,
+          message:              call_message,
           is_callstack_message: (call_message.nil? ? false : true),
-          filename: call_file,
-          lineno: call_line
+          filename:             call_file,
+          lineno:               call_line
         )
         output = indent_string << current << ' ← ' << from << (do_indent ? '' : @inoutdent_end_character)
       end
@@ -641,7 +642,7 @@ module Debug
 
     private
 
-    # Reformats the call stack information to a custom format.
+    # Reformat the call stack information to a custom format.
     #
     # @param hash_args [Hash] Hash containing information from the call stack:
     # @option hash_args [String] :message ('') The current function or custom message.

@@ -41,18 +41,27 @@ module BifrostBot
         #  return nil
         #end
 
+        show_user_id = helper_obj.user_id
+
         if !helper_obj.command_args_str.empty? && helper_obj.user_is_server_moderator?
-          tagged_user = BOT_OBJ.parse_mention(helper_obj.command_args_str)
+          #tagged_user = BOT_OBJ.parse_mention(helper_obj.command_args_str)
           # <User username=Bifrost-dev id=361603350975741952 discriminator=0209>
           #ap tagged_user
+
+          # 123456789012345678
+          # <@123456789012345678>
+          # <@!123456789012345678>
+          user_tagged = helper_obj.command_args_str.match(/^<?@?!?(?<id>[0-9]+)>?$/)
+          show_user_id = user_tagged[:id] if user_tagged
         end
 
-        show_user_id = if tagged_user.nil? || tagged_user.class != Discordrb::User
-                         helper_obj.user_id
-                       else
-                         tagged_user.id
-                       end
+        #show_user_id = if tagged_user.nil? || tagged_user.class != Discordrb::User
+        #                 helper_obj.user_id
+        #               else
+        #                 tagged_user.id
+        #               end
         #
+
         server_id = BOT_CONFIG.bot_runs_on_server_id
         show_user_obj = BOT_CACHE.get_server_user(server_id, show_user_id)
         #Debug.pp show_user_obj
@@ -64,6 +73,7 @@ module BifrostBot
         user_nicknames_str = user_nicknames_array.join ', '
 
         user_info_embed_hash = {
+          # rubocop:disable Layout/AlignHash
           author: {
             icon_url: show_user_obj.avatar_url,
             name:     +'' << show_user_obj.username << (show_user_obj.nick.nil_or_empty? ? '' : +' → ' << show_user_obj.nick)
@@ -88,6 +98,7 @@ module BifrostBot
             value: user_nicknames_str,
             inline: false
           }]
+          # rubocop:enable Layout/AlignHash
         }
 
         embed_return_hash = helper_obj.create_discord_embed(user_info_embed_hash)
